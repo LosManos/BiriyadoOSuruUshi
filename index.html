@@ -14,9 +14,7 @@
   <link rel="stylesheet" href="index.css">
 
   <!-- Core QR & Scanning Libraries (Fully client-side & offline-capable) -->
-  <!-- jsQR for real-time camera decoding -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-  <!-- qrcodejs for high-quality client-side QR generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
@@ -32,15 +30,14 @@
           <h1>Biriyado o Suru Ushi</h1>
           <p class="subtitle">The Billiards-Playing Cow</p>
         </div>
-        <p class="tagline">A cozy, cooperative pool game where you share turns offline by scanning QR codes!</p>
+        <p class="tagline">A cozy, cooperative pool game where you share turns by passing a QR URL link to your co-player!</p>
       </header>
 
       <main class="start-main">
-        <div class="setup-container">
-          
-          <!-- Co-Player 1 Selection -->
+        <div class="single-setup-container">
+          <!-- Only Player 1 selects their breed initially -->
           <div class="cow-selector" id="p1-selector">
-            <div class="selector-title">Co-Player 1</div>
+            <div class="selector-title">Your Cow Champion</div>
             <div class="avatar-preview" id="p1-preview">
               <!-- Inline Dynamic SVG will be rendered here by JS -->
             </div>
@@ -51,24 +48,6 @@
               <button class="arrow-btn next" data-player="1">→</button>
             </div>
           </div>
-
-          <!-- VS Chime/Icon -->
-          <div class="vs-divider">&amp;</div>
-
-          <!-- Co-Player 2 Selection -->
-          <div class="cow-selector" id="p2-selector">
-            <div class="selector-title">Co-Player 2</div>
-            <div class="avatar-preview" id="p2-preview">
-              <!-- Inline Dynamic SVG will be rendered here by JS -->
-            </div>
-            <div class="cow-breed-name" id="p2-breed-name">Japanese Mishima</div>
-            <div class="selector-arrows">
-              <button class="arrow-btn prev" data-player="2">←</button>
-              <span class="selection-status">Choose Breed</span>
-              <button class="arrow-btn next" data-player="2">→</button>
-            </div>
-          </div>
-
         </div>
 
         <!-- Breed details card that updates dynamically -->
@@ -79,7 +58,7 @@
         </div>
 
         <button id="btn-start-game" class="btn btn-primary btn-glowing">
-          Let's Play Pool! 🐄💨
+          Let's Head into the Pasture! 🐄💨
         </button>
       </main>
 
@@ -91,7 +70,7 @@
     <!-- ==================== SCREEN 2: MAIN GAME ARENA ==================== -->
     <section id="screen-game" class="screen">
       
-      <!-- HUD / Top Bar -->
+      <!-- HUD / Top Bar (Adapted for Vertical Layout) -->
       <header class="game-hud">
         <div class="hud-player" id="hud-p1">
           <div class="hud-avatar" id="hud-p1-avatar"></div>
@@ -109,10 +88,10 @@
         </div>
 
         <div class="hud-player" id="hud-p2">
-          <div class="hud-avatar" id="hud-p2-avatar"></div>
+          <div class="hud-avatar" id="hud-p2-avatar">❓</div>
           <div class="hud-info">
             <span class="hud-label">Player 2</span>
-            <span class="hud-name" id="hud-p2-name">Mishima</span>
+            <span class="hud-name" id="hud-p2-name">Waiting...</span>
           </div>
         </div>
       </header>
@@ -122,9 +101,47 @@
         <div class="physics-warning" id="physics-notice">Balls are rolling... 🎱</div>
         <div class="pocket-message" id="pocket-notice">Nice shot! 🐮🎉</div>
         
-        <!-- Table aspect ratio is maintained in CSS -->
+        <!-- Table aspect ratio is maintained in CSS (Vertical 1:2) -->
         <div class="canvas-wrapper">
           <canvas id="game-canvas"></canvas>
+          
+          <!-- IN-GAME BREED SELECTOR FOR CO-PLAYER 2 -->
+          <div id="in-game-selector" class="in-game-selector-overlay">
+            <div class="selector-card">
+              <span class="selector-card-cow">🤠🐄</span>
+              <h3>Co-Player 2</h3>
+              <h2>Choose Your Cow Champion!</h2>
+              <p class="selector-card-desc">Welcome to the pool pen! Choose your breed to take your first turn.</p>
+              
+              <div class="breed-grid">
+                <button class="breed-select-btn" data-breed="SLB">
+                  <div class="btn-avatar-prev" id="prev-SLB"></div>
+                  <span class="btn-breed-label">SLB</span>
+                </button>
+                <button class="breed-select-btn" data-breed="Mishima">
+                  <div class="btn-avatar-prev" id="prev-Mishima"></div>
+                  <span class="btn-breed-label">Mishima</span>
+                </button>
+                <button class="breed-select-btn" data-breed="Longhorn">
+                  <div class="btn-avatar-prev" id="prev-Longhorn"></div>
+                  <span class="btn-breed-label">Longhorn</span>
+                </button>
+                <button class="breed-select-btn" data-breed="Zebu">
+                  <div class="btn-avatar-prev" id="prev-Zebu"></div>
+                  <span class="btn-breed-label">Zebu</span>
+                </button>
+              </div>
+              
+              <div class="selected-breed-desc" id="in-game-desc">
+                Tap a breed to view profile details.
+              </div>
+              
+              <button id="btn-confirm-p2-breed" class="btn btn-primary btn-disabled" disabled>
+                Confirm Breed & Play! 🥛
+              </button>
+            </div>
+          </div>
+          
         </div>
 
         <div class="interaction-help" id="help-text">
@@ -160,7 +177,7 @@
         </header>
         <main class="modal-body share-body">
           <p class="modal-desc">
-            Let your co-player scan this QR code with their game camera. It transfers your cow positions and turn details instantly!
+            Let your co-player scan this QR code. It contains a direct web link that will instantly load this match on their device!
           </p>
           
           <div class="qr-container-wrapper">
@@ -170,7 +187,7 @@
           <div class="state-summary-card">
             <div class="summary-line">
               <span class="summary-label">Next Turn:</span>
-              <span class="summary-value" id="qr-next-cow-name">Japanese Mishima</span>
+              <span class="summary-value" id="qr-next-cow-name">Co-Player 2</span>
             </div>
             <div class="summary-line">
               <span class="summary-label">Balls Remaining:</span>

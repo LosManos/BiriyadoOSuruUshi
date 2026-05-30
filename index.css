@@ -25,11 +25,9 @@
   --color-secondary: hsl(200, 95%, 48%);     /* Bright sky blue */
   --color-accent: hsl(45, 93%, 58%);         /* Golden buttercup yellow */
   
-  /* Pool Table Custom Felt (Modern Lush Pasture Green) */
-  --table-felt: hsl(155, 45%, 16%);
-  --table-felt-highlight: hsl(155, 45%, 22%);
-  --table-rail: hsl(24, 43%, 22%);            /* Oak rail */
-  --table-cushion: hsl(155, 45%, 12%);
+  /* Cow Pasture Felt Styles */
+  --table-felt: hsl(145, 38%, 18%);
+  --table-rail: hsl(22, 38%, 24%);            /* Rustic log wood */
   
   /* System Spacers */
   --radius-sm: 8px;
@@ -67,7 +65,7 @@ html, body {
   align-items: center;
 }
 
-/* Playful Cow Spotted Wallpaper (Visible on large screens behind phone simulator) */
+/* Playful Cow Spotted Wallpaper */
 body::before {
   content: "";
   position: absolute;
@@ -88,8 +86,8 @@ body::before {
 .app-container {
   width: 100%;
   height: 100%;
-  max-width: 480px; /* Standard premium mobile view width */
-  max-height: 920px; /* Standard mobile view height aspect ratio */
+  max-width: 480px;
+  max-height: 920px;
   background: var(--bg-card);
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-md);
@@ -150,7 +148,6 @@ body::before {
   overflow: hidden;
 }
 
-/* Draw some cute cow spots on the logo circle */
 .cow-spotted-ring::before {
   content: "";
   position: absolute;
@@ -178,7 +175,7 @@ body::before {
 .start-header {
   text-align: center;
   margin-top: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .start-header h1 {
@@ -209,30 +206,22 @@ body::before {
 }
 
 /* Setup Container with Grid Selection */
-.setup-container {
+.single-setup-container {
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
   align-items: center;
   background: var(--bg-glass);
   backdrop-filter: blur(12px);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  padding: 16px 8px;
+  padding: 20px;
   margin-bottom: 20px;
   position: relative;
 }
 
-.vs-divider {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 20px;
-  color: var(--color-accent);
-  text-shadow: 0 0 10px rgba(245, 196, 83, 0.4);
-  z-index: 2;
-}
-
 .cow-selector {
-  width: 42%;
+  width: 100%;
+  max-width: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -245,26 +234,26 @@ body::before {
   letter-spacing: 1px;
   color: var(--text-muted);
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .avatar-preview {
-  width: 84px;
-  height: 84px;
+  width: 96px;
+  height: 96px;
   border-radius: var(--radius-circle);
   background: rgba(255,255,255,0.03);
-  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border: 2px dashed rgba(255, 255, 255, 0.25);
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   transition: var(--transition-spring);
   position: relative;
 }
 
 .avatar-preview svg {
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
 }
 
 .cow-selector:hover .avatar-preview {
@@ -275,10 +264,10 @@ body::before {
 .cow-breed-name {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text-bright);
-  min-height: 22px;
-  margin-bottom: 8px;
+  min-height: 24px;
+  margin-bottom: 12px;
 }
 
 .selector-arrows {
@@ -298,8 +287,8 @@ body::before {
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-sm);
   display: flex;
   justify-content: center;
@@ -413,15 +402,9 @@ body::before {
 }
 
 @keyframes pulse-shadow {
-  0% {
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
-  }
-  50% {
-    box-shadow: 0 4px 20px rgba(34, 197, 94, 0.5);
-  }
-  100% {
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
-  }
+  0% { box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2); }
+  50% { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.5); }
+  100% { box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2); }
 }
 
 .btn-secondary {
@@ -464,7 +447,6 @@ body::before {
   color: var(--color-primary);
 }
 
-/* Footer elements */
 .start-footer {
   margin-top: auto;
   text-align: center;
@@ -478,9 +460,8 @@ body::before {
    SCREEN 2: PLAYING ARENA & HUD
    ========================================================================== */
 
-/* Remove excess padding to fit pool table vertically */
 #screen-game {
-  padding: 12px;
+  padding: 10px;
 }
 
 .game-hud {
@@ -490,14 +471,14 @@ body::before {
   background: var(--bg-glass);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  padding: 10px 14px;
-  margin-bottom: 12px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
 }
 
 .hud-player {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: 32%;
 }
 
@@ -507,20 +488,21 @@ body::before {
 }
 
 .hud-avatar {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-circle);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.25);
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.12);
+  font-size: 14px;
 }
 
 .hud-avatar svg {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
 }
 
 .hud-info {
@@ -529,7 +511,7 @@ body::before {
 }
 
 .hud-label {
-  font-size: 9px;
+  font-size: 8px;
   color: var(--text-muted);
   text-transform: uppercase;
   font-weight: 500;
@@ -538,7 +520,7 @@ body::before {
 .hud-name {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-bright);
 }
 
@@ -546,12 +528,12 @@ body::before {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 34%;
+  width: 36%;
 }
 
 .turn-counter {
   background: rgba(0, 0, 0, 0.3);
-  padding: 2px 8px;
+  padding: 1px 6px;
   border-radius: 20px;
   border: 1px solid var(--border-light);
   margin-bottom: 2px;
@@ -559,20 +541,20 @@ body::before {
 
 .turn-number {
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--color-accent);
 }
 
 .turn-badge {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--color-primary);
   letter-spacing: 0.5px;
 }
 
-/* Canvas / Pool Table Container */
+/* Canvas / Pool Table Container (Oriented Vertically) */
 .canvas-container {
   flex-grow: 1;
   display: flex;
@@ -580,33 +562,34 @@ body::before {
   justify-content: center;
   align-items: center;
   position: relative;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   width: 100%;
 }
 
-/* Responsive aspect ratio preservation (standard pool is 2:1) */
+/* Aspect ratio is 1:2 (Width = Half the Height) */
 .canvas-wrapper {
   width: 100%;
-  max-width: 440px;
-  aspect-ratio: 2 / 1;
+  max-width: 360px; /* Reduced width for vertical space fitting */
+  aspect-ratio: 1 / 2;
   background: var(--table-rail);
-  border-radius: 12px;
-  padding: 10px; /* Represents the rail cushions */
+  border-radius: 16px;
+  padding: 8px; /* Fence / Rail cushion bounds padding */
   box-shadow: var(--shadow-md), inset 0 2px 8px rgba(0,0,0,0.8);
   position: relative;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
-/* Inner shadow and styling simulating pockets & cushions */
+/* Inset shadow giving depth to the grass pasture */
 .canvas-wrapper::before {
   content: "";
   position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
-  border-radius: 4px;
-  box-shadow: inset 0 6px 12px rgba(0,0,0,0.7);
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border-radius: 8px;
+  box-shadow: inset 0 8px 16px rgba(0,0,0,0.85);
   pointer-events: none;
   z-index: 5;
 }
@@ -614,7 +597,7 @@ body::before {
 #game-canvas {
   width: 100%;
   height: 100%;
-  border-radius: 4px;
+  border-radius: 8px;
   display: block;
   cursor: crosshair;
   background-color: var(--table-felt);
@@ -623,8 +606,8 @@ body::before {
 /* Game overlays */
 .physics-warning {
   position: absolute;
-  top: 15px;
-  background: rgba(15, 23, 42, 0.9);
+  top: 10px;
+  background: rgba(15, 23, 42, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 4px 12px;
   border-radius: 20px;
@@ -646,7 +629,7 @@ body::before {
 
 .pocket-message {
   position: absolute;
-  top: 40%;
+  top: 30%;
   background: var(--bg-glass-heavy);
   border: 2px solid var(--color-primary);
   box-shadow: var(--shadow-glow);
@@ -654,7 +637,7 @@ body::before {
   border-radius: 40px;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 20px;
+  font-size: 18px;
   color: var(--text-bright);
   z-index: 10;
   pointer-events: none;
@@ -672,12 +655,165 @@ body::before {
   font-size: 11px;
   color: var(--text-muted);
   text-align: center;
-  margin-top: 8px;
+  margin-top: 6px;
   line-height: 1.4;
   max-width: 320px;
 }
 
-/* Game Controls Area */
+/* ==========================================================================
+   IN-GAME CO-PLAYER 2 SELECTOR OVERLAY
+   ========================================================================== */
+
+.in-game-selector-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  background: rgba(10, 15, 25, 0.85);
+  backdrop-filter: blur(14px);
+  border-radius: 8px;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.95);
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.in-game-selector-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.selector-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.selector-card-cow {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.selector-card h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.selector-card h2 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-bright);
+  margin-bottom: 4px;
+}
+
+.selector-card-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  max-width: 260px;
+  line-height: 1.4;
+}
+
+/* 2x2 Grid for Circular Buttons */
+.breed-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 240px;
+  margin-bottom: 16px;
+}
+
+.breed-select-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 10px 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition-spring);
+}
+
+.btn-avatar-prev {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-circle);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.btn-avatar-prev svg {
+  width: 40px;
+  height: 40px;
+}
+
+.btn-breed-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: var(--transition-smooth);
+}
+
+.breed-select-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-glow);
+  transform: scale(1.03);
+}
+
+/* Active Chosen State */
+.breed-select-btn.chosen {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.15);
+}
+
+.breed-select-btn.chosen .btn-avatar-prev {
+  border-style: solid;
+  border-color: var(--color-primary);
+}
+
+.breed-select-btn.chosen .btn-breed-label {
+  color: var(--color-primary);
+}
+
+.selected-breed-desc {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  min-height: 48px;
+  width: 100%;
+  max-width: 240px;
+  margin-bottom: 16px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* Bottom HUD Controls */
 .game-controls {
   display: flex;
   gap: 10px;
@@ -709,7 +845,7 @@ body::before {
   height: 100%;
   display: flex;
   justify-content: center;
-  align-items: flex-end; /* Mobile drawer style standard */
+  align-items: flex-end;
   z-index: 100;
   opacity: 0;
   pointer-events: none;
@@ -802,11 +938,10 @@ body::before {
   width: 220px;
   height: 220px;
   margin: 0 auto 20px;
-  box-shadow: var(--shadow-md), 0 0 25px rgba(255,255,255,0.05);
+  box-shadow: var(--shadow-md);
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
 }
 
 #qr-code-target {
@@ -814,7 +949,6 @@ body::before {
   height: 188px;
 }
 
-/* Fix for qrcode.js layout rendering */
 #qr-code-target img, #qr-code-target canvas {
   width: 100% !important;
   height: 100% !important;
@@ -908,10 +1042,9 @@ body::before {
   width: 220px;
   height: 220px;
   position: relative;
-  box-shadow: 0 0 0 4000px rgba(10, 15, 30, 0.2); /* Secondary fallback shade */
+  box-shadow: 0 0 0 4000px rgba(10, 15, 30, 0.2);
 }
 
-/* Cool neon brackets around scanning area */
 .scan-target-frame .corner {
   position: absolute;
   width: 24px;
@@ -926,7 +1059,6 @@ body::before {
 .scan-target-frame .corner.bl { bottom: 0; left: 0; border-width: 0 0 4px 4px; border-bottom-left-radius: 8px; }
 .scan-target-frame .corner.br { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-bottom-right-radius: 8px; }
 
-/* Pulsating laser scanning line */
 .scan-line {
   position: absolute;
   top: 0;
