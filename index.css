@@ -116,8 +116,9 @@ body::before {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 24px;
-  overflow-y: auto;
+  padding: 20px;
+  overflow: hidden;
+  touch-action: none;
   opacity: 0;
   pointer-events: none;
   transform: translateY(15px) scale(0.98);
@@ -130,6 +131,12 @@ body::before {
   pointer-events: auto;
   transform: translateY(0) scale(1);
   z-index: 4;
+}
+
+/* Allow startup breed selector menu to scroll if phone screen is extremely short */
+#screen-start {
+  overflow-y: auto;
+  touch-action: auto;
 }
 
 /* Playful Cow Spots Visual Elements */
@@ -569,8 +576,7 @@ body::before {
 /* Aspect ratio is 1:2 (Width = Half the Height) */
 .canvas-wrapper {
   width: 100%;
-  max-width: 360px; /* Reduced width for vertical space fitting */
-  aspect-ratio: 1 / 2;
+  height: 100%;
   background: var(--table-rail);
   border-radius: 16px;
   padding: 8px; /* Fence / Rail cushion bounds padding */
@@ -578,6 +584,7 @@ body::before {
   position: relative;
   box-sizing: border-box;
   overflow: hidden;
+  touch-action: none; /* Block browser drag scrolling during aims! */
 }
 
 /* Inset shadow giving depth to the grass pasture */

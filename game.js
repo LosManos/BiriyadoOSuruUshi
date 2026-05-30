@@ -447,8 +447,16 @@ class GameEngine {
 
   canvasToVirtual(clientX, clientY) {
     const rect = this.canvas.getBoundingClientRect();
-    const x = ((clientX - rect.left) / rect.width) * this.virtualWidth;
-    const y = ((clientY - rect.top) / rect.height) * this.virtualHeight;
+    const canvasX = clientX - rect.left;
+    const canvasY = clientY - rect.top;
+    
+    // Calculate independent scaling to stretch calculations
+    const scaleX = rect.width / this.virtualWidth;
+    const scaleY = rect.height / this.virtualHeight;
+    
+    const x = canvasX / scaleX;
+    const y = canvasY / scaleY;
+    
     return { x, y };
   }
 
@@ -472,11 +480,11 @@ class GameEngine {
       sinking: false
     });
     
-    // 2. 6-Ball Triangle Rack placed pointing down, apexed at (250, 300)
+    // 2. 6-Ball Triangle Rack placed pointing down, apexed at (250, 320)
     const apexX = 250;
-    const apexY = 300;
-    const spacingX = this.ballRadius * 2 + 0.5;
-    const spacingY = this.ballRadius * 1.732; // Row offset d * cos(30deg)
+    const apexY = 320; // Pushed down slightly to give room at the top
+    const spacingX = this.ballRadius * 2.7; // Spaced wider horizontally to prevent visual overlap on stretched viewports
+    const spacingY = this.ballRadius * 2.5; // Spaced taller vertically to prevent visual overlap on stretched viewports
     
     // Row 1 (Apex ball)
     this.balls.push({ id: 1, x: apexX, y: apexY, vx: 0, vy: 0, radius: this.ballRadius, color: '#f5c453', scale: 1, sinking: false });
@@ -820,9 +828,12 @@ class GameEngine {
   draw() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     
-    this.ctx.save();
+    // Calculate independent scaling to let the pasture/fence stretch and fill available space
     const scaleX = this.canvas.width / this.virtualWidth;
     const scaleY = this.canvas.height / this.virtualHeight;
+    
+    // Draw the table felt, fences, and pockets using the stretched coordinate scale
+    this.ctx.save();
     this.ctx.scale(scaleX, scaleY);
     
     // 1. Lush Green Grass Field base
@@ -844,7 +855,6 @@ class GameEngine {
     this.ctx.lineWidth = 1.5;
     this.grassTufts.forEach(tuft => {
       this.ctx.beginPath();
-      // Draw a tiny triple blade tuft of grass
       this.ctx.moveTo(tuft.x, tuft.y);
       this.ctx.lineTo(tuft.x - 2, tuft.y - tuft.length);
       this.ctx.moveTo(tuft.x, tuft.y);
@@ -857,23 +867,19 @@ class GameEngine {
     // 3. Draw Buttercups & Daisies
     this.flowers.forEach(flower => {
       if (flower.type === 'buttercup') {
-        // Draw golden buttercup yellow dots
         this.ctx.beginPath();
         this.ctx.arc(flower.x, flower.y, flower.size, 0, Math.PI * 2);
         this.ctx.fillStyle = '#f5c453';
         this.ctx.fill();
-        // center
         this.ctx.beginPath();
         this.ctx.arc(flower.x, flower.y, flower.size * 0.4, 0, Math.PI * 2);
         this.ctx.fillStyle = '#d97706';
         this.ctx.fill();
       } else {
-        // Draw white daisies
         this.ctx.beginPath();
         this.ctx.arc(flower.x, flower.y, flower.size, 0, Math.PI * 2);
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fill();
-        // center yellow pollen
         this.ctx.beginPath();
         this.ctx.arc(flower.x, flower.y, flower.size * 0.4, 0, Math.PI * 2);
         this.ctx.fillStyle = '#f5c453';
@@ -889,17 +895,13 @@ class GameEngine {
     // Draw wood grain details on logs
     this.ctx.strokeStyle = '#42240e';
     this.ctx.lineWidth = 2;
-    // Top Rail log grain
     this.ctx.beginPath();
     this.ctx.moveTo(14, 7); this.ctx.lineTo(this.virtualWidth - 14, 7);
     this.ctx.moveTo(14, 11); this.ctx.lineTo(this.virtualWidth - 14, 11);
-    // Bottom Rail log grain
     this.ctx.moveTo(14, this.virtualHeight - 7); this.ctx.lineTo(this.virtualWidth - 14, this.virtualHeight - 7);
     this.ctx.moveTo(14, this.virtualHeight - 11); this.ctx.lineTo(this.virtualWidth - 14, this.virtualHeight - 11);
-    // Left rail grain
     this.ctx.moveTo(7, 14); this.ctx.lineTo(7, this.virtualHeight - 14);
     this.ctx.moveTo(11, 14); this.ctx.lineTo(11, this.virtualHeight - 14);
-    // Right rail grain
     this.ctx.moveTo(this.virtualWidth - 7, 14); this.ctx.lineTo(this.virtualWidth - 7, this.virtualHeight - 14);
     this.ctx.moveTo(this.virtualWidth - 11, 14); this.ctx.lineTo(this.virtualWidth - 11, this.virtualHeight - 14);
     this.ctx.stroke();
@@ -923,36 +925,48 @@ class GameEngine {
     this.ctx.lineWidth = 6;
     this.ctx.strokeRect(28, 28, this.virtualWidth - 56, this.virtualHeight - 56);
     
-    // 5. Draw muddy watering hole pockets
+    this.ctx.restore(); // BACK to unscaled normal screen pixel coordinates!
+
+    // 5. Draw muddy watering hole pockets (Centered at screen positions, drawn as perfect round circles!)
     this.pockets.forEach(pocket => {
-      // mud outline ring
+      const screenX = pocket.x * scaleX;
+      const screenY = pocket.y * scaleY;
+      const screenR = pocket.r * scaleX; // Uniform pocket radius matching ball scale
+      
+      // Mud border
       this.ctx.beginPath();
-      this.ctx.arc(pocket.x, pocket.y, pocket.r + 2, 0, Math.PI * 2);
-      this.ctx.fillStyle = '#2d1a0f'; // rich mud brown
+      this.ctx.arc(screenX, screenY, screenR + 2, 0, Math.PI * 2);
+      this.ctx.fillStyle = '#2d1a0f';
       this.ctx.fill();
       
-      // inner dark pocket
+      // Inner watering hole
       this.ctx.beginPath();
-      this.ctx.arc(pocket.x, pocket.y, pocket.r, 0, Math.PI * 2);
-      this.ctx.fillStyle = '#080808'; // water deep hole
+      this.ctx.arc(screenX, screenY, screenR, 0, Math.PI * 2);
+      this.ctx.fillStyle = '#080808';
       this.ctx.fill();
     });
-    
-    // 6. Draw cue guides
+
+    // 6. Draw cue guide lines (Aiming system)
     if (this.isDragging) {
       const cueBall = this.balls.find(b => b.isCue);
       if (cueBall) {
-        const dx = cueBall.x - this.dragCurrent.x;
-        const dy = cueBall.y - this.dragCurrent.y;
+        const cueScreenX = cueBall.x * scaleX;
+        const cueScreenY = cueBall.y * scaleY;
+        const dragScreenX = this.dragCurrent.x * scaleX;
+        const dragScreenY = this.dragCurrent.y * scaleY;
+        
+        const dx = cueScreenX - dragScreenX;
+        const dy = cueScreenY - dragScreenY;
         const dist = Math.hypot(dx, dy);
         
         if (dist > 8) {
           const ux = dx / dist;
           const uy = dy / dist;
           
+          // Draw projected guide line
           this.ctx.beginPath();
-          this.ctx.moveTo(cueBall.x + ux * cueBall.radius, cueBall.y + uy * cueBall.radius);
-          this.ctx.lineTo(cueBall.x + ux * Math.min(dist * 2.5, 300), cueBall.y + uy * Math.min(dist * 2.5, 300));
+          this.ctx.moveTo(cueScreenX + ux * cueBall.radius * scaleX, cueScreenY + uy * cueBall.radius * scaleX);
+          this.ctx.lineTo(cueScreenX + ux * Math.min(dist * 2.5, 300), cueScreenY + uy * Math.min(dist * 2.5, 300));
           this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
           this.ctx.lineWidth = 3;
           this.ctx.setLineDash([5, 5]);
@@ -961,8 +975,8 @@ class GameEngine {
           
           // wood cue stick
           this.ctx.beginPath();
-          this.ctx.moveTo(cueBall.x - ux * (cueBall.radius + 10), cueBall.y - uy * (cueBall.radius + 10));
-          this.ctx.lineTo(this.dragCurrent.x, this.dragCurrent.y);
+          this.ctx.moveTo(cueScreenX - ux * (cueBall.radius * scaleX + 10), cueScreenY - uy * (cueBall.radius * scaleX + 10));
+          this.ctx.lineTo(dragScreenX, dragScreenY);
           this.ctx.strokeStyle = '#b45309';
           this.ctx.lineWidth = 5;
           this.ctx.lineCap = 'round';
@@ -970,8 +984,8 @@ class GameEngine {
           
           // gold cue tip
           this.ctx.beginPath();
-          this.ctx.moveTo(cueBall.x - ux * (cueBall.radius + 5), cueBall.y - uy * (cueBall.radius + 5));
-          this.ctx.lineTo(cueBall.x - ux * (cueBall.radius + 10), cueBall.y - uy * (cueBall.radius + 10));
+          this.ctx.moveTo(cueScreenX - ux * (cueBall.radius * scaleX + 5), cueScreenY - uy * (cueBall.radius * scaleX + 5));
+          this.ctx.lineTo(cueScreenX - ux * (cueBall.radius * scaleX + 10), cueScreenY - uy * (cueBall.radius * scaleX + 10));
           this.ctx.strokeStyle = '#f5c453';
           this.ctx.lineWidth = 5;
           this.ctx.stroke();
@@ -979,11 +993,13 @@ class GameEngine {
       }
     }
     
-    // 4. Draw Billiard Balls
+    // 7. Draw Billiard Balls - centered dynamically but scaled uniformly
     this.balls.forEach(ball => {
       this.ctx.save();
-      this.ctx.translate(ball.x, ball.y);
-      this.ctx.scale(ball.scale, ball.scale);
+      // Translate to the stretched screen coordinate
+      this.ctx.translate(ball.x * scaleX, ball.y * scaleY);
+      // Scale uniformly by scaleX so balls remain perfectly round circles!
+      this.ctx.scale(ball.scale * scaleX, ball.scale * scaleX);
       
       // Shadow
       this.ctx.beginPath();
@@ -991,9 +1007,8 @@ class GameEngine {
       this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
       this.ctx.fill();
       
-      // Render Cue Ball (Spotted Cow print cue ball!)
+      // Render Cue Ball
       if (ball.isCue) {
-        // Main white cue
         this.ctx.beginPath();
         this.ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
         this.ctx.fillStyle = '#ffffff';
@@ -1017,13 +1032,11 @@ class GameEngine {
         this.ctx.fillStyle = '#111111';
         this.ctx.fill();
       } else {
-        // Target Balls (solid colored spheres)
         this.ctx.beginPath();
         this.ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
         this.ctx.fillStyle = ball.color;
         this.ctx.fill();
         
-        // Sphere highlights
         const radGlow = this.ctx.createRadialGradient(-4, -4, 1, 0, 0, ball.radius);
         radGlow.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
         radGlow.addColorStop(0.3, 'rgba(255, 255, 255, 0)');
@@ -1031,7 +1044,6 @@ class GameEngine {
         this.ctx.fillStyle = radGlow;
         this.ctx.fill();
         
-        // Sunk Ball Number label
         this.ctx.beginPath();
         this.ctx.arc(0, 0, 6, 0, Math.PI * 2);
         this.ctx.fillStyle = '#ffffff';
@@ -1046,8 +1058,6 @@ class GameEngine {
       
       this.ctx.restore();
     });
-    
-    this.ctx.restore();
   }
 
   // --- UI INTEGRATION HELPERS ---
