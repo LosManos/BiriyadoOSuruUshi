@@ -483,20 +483,31 @@ class GameEngine {
     // 2. 6-Ball Triangle Rack placed pointing down, apexed at (250, 320)
     const apexX = 250;
     const apexY = 320; // Pushed down slightly to give room at the top
-    const spacingX = this.ballRadius * 2.7; // Spaced wider horizontally to prevent visual overlap on stretched viewports
-    const spacingY = this.ballRadius * 2.5; // Spaced taller vertically to prevent visual overlap on stretched viewports
+    
+    // Calculate aspect ratio correction to make balls touch perfectly on screen
+    const rect = this.canvas.getBoundingClientRect();
+    const canvasW = rect.width || this.canvas.width || 360;
+    const canvasH = rect.height || this.canvas.height || 720;
+    const cScaleX = canvasW / this.virtualWidth;
+    const cScaleY = canvasH / this.virtualHeight;
+    const aspectCorrection = cScaleX / cScaleY;
+    
+    // Horizontal spacing (dx) is exactly 2 * radius (30)
+    const dx = this.ballRadius * 2;
+    // Vertical spacing (dy) uses trigonometry corrected by our aspect ratio ratio!
+    const dy = 25.98 * aspectCorrection; 
     
     // Row 1 (Apex ball)
     this.balls.push({ id: 1, x: apexX, y: apexY, vx: 0, vy: 0, radius: this.ballRadius, color: '#f5c453', scale: 1, sinking: false });
     
-    // Row 2 (behind it - higher up)
-    this.balls.push({ id: 2, x: apexX - spacingX/2, y: apexY - spacingY, vx: 0, vy: 0, radius: this.ballRadius, color: '#3b82f6', scale: 1, sinking: false });
-    this.balls.push({ id: 3, x: apexX + spacingX/2, y: apexY - spacingY, vx: 0, vy: 0, radius: this.ballRadius, color: '#ef4444', scale: 1, sinking: false });
+    // Row 2 (y = apexY - dy)
+    this.balls.push({ id: 2, x: apexX - dx/2, y: apexY - dy, vx: 0, vy: 0, radius: this.ballRadius, color: '#3b82f6', scale: 1, sinking: false });
+    this.balls.push({ id: 3, x: apexX + dx/2, y: apexY - dy, vx: 0, vy: 0, radius: this.ballRadius, color: '#ef4444', scale: 1, sinking: false });
     
-    // Row 3 (closer to top rail)
-    this.balls.push({ id: 4, x: apexX - spacingX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#a855f7', scale: 1, sinking: false });
-    this.balls.push({ id: 5, x: apexX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#f97316', scale: 1, sinking: false });
-    this.balls.push({ id: 6, x: apexX + spacingX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#10b981', scale: 1, sinking: false });
+    // Row 3 (y = apexY - 2*dy)
+    this.balls.push({ id: 4, x: apexX - dx, y: apexY - dy * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#a855f7', scale: 1, sinking: false });
+    this.balls.push({ id: 5, x: apexX, y: apexY - dy * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#f97316', scale: 1, sinking: false });
+    this.balls.push({ id: 6, x: apexX + dx, y: apexY - dy * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#10b981', scale: 1, sinking: false });
     
     this.isRolling = false;
     this.isDragging = false;
