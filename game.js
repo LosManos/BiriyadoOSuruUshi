@@ -410,26 +410,134 @@ class GameEngine {
   generatePastureFoliage() {
     this.flowers = [];
     this.grassTufts = [];
-    const types = ['buttercup', 'daisy'];
+    this.borderGrassTufts = [];
+    const types = ['buttercup', 'daisy', 'clover'];
     
-    // Generate 20 random flowers inside the fence area
-    for (let i = 0; i < 20; i++) {
+    // Generate 32 random wildflowers and clovers
+    for (let i = 0; i < 32; i++) {
       this.flowers.push({
         x: 45 + Math.random() * (this.virtualWidth - 90),
         y: 45 + Math.random() * (this.virtualHeight - 90),
         type: types[Math.floor(Math.random() * types.length)],
-        size: 3 + Math.random() * 3
+        size: 3.5 + Math.random() * 3
       });
     }
 
-    // Generate 30 tufts of grass
-    for (let i = 0; i < 30; i++) {
+    // Generate 75 organic grass tuft positions
+    for (let i = 0; i < 75; i++) {
       this.grassTufts.push({
         x: 45 + Math.random() * (this.virtualWidth - 90),
         y: 45 + Math.random() * (this.virtualHeight - 90),
-        length: 6 + Math.random() * 6
+        length: 5 + Math.random() * 6
       });
     }
+
+    // Generate 45 border grass tufts that hug the fence rails and peek over them
+    for (let i = 0; i < 45; i++) {
+      const side = Math.floor(Math.random() * 4);
+      let x, y, len = 6 + Math.random() * 6;
+      if (side === 0) { // Top rail (y near 25)
+        x = 40 + Math.random() * (this.virtualWidth - 80);
+        y = 22 + Math.random() * 8;
+      } else if (side === 1) { // Bottom rail (y near 975)
+        x = 40 + Math.random() * (this.virtualWidth - 80);
+        y = 970 + Math.random() * 8;
+      } else if (side === 2) { // Left rail (x near 25)
+        x = 22 + Math.random() * 8;
+        y = 40 + Math.random() * (this.virtualHeight - 80);
+      } else { // Right rail (x near 475)
+        x = 470 + Math.random() * 8;
+        y = 40 + Math.random() * (this.virtualHeight - 80);
+      }
+      this.borderGrassTufts.push({ x, y, length: len });
+    }
+
+    // Create the procedural high-fidelity grass texture offscreen canvas
+    this.createGrassTexture();
+  }
+
+  // Pre-renders a highly-detailed pasture texture canvas for maximum performance and gorgeous grass aesthetics
+  createGrassTexture() {
+    const grassCanvas = document.createElement('canvas');
+    grassCanvas.width = this.virtualWidth;
+    grassCanvas.height = this.virtualHeight;
+    const ctx = grassCanvas.getContext('2d');
+
+    // 1. Base pasture green
+    ctx.fillStyle = '#1c4422'; // Lush base green
+    ctx.fillRect(0, 0, this.virtualWidth, this.virtualHeight);
+
+    // 2. Mower Lawn stripes (alternating light/dark green bands for a premium turf look)
+    const numStripes = 10;
+    const stripeWidth = this.virtualWidth / numStripes;
+    for (let i = 0; i < numStripes; i++) {
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(34, 197, 94, 0.04)' : 'rgba(10, 35, 10, 0.04)';
+      ctx.fillRect(i * stripeWidth, 0, stripeWidth, this.virtualHeight);
+    }
+
+    // 3. Sunlight radial glow
+    const radialGrad = ctx.createRadialGradient(
+      this.virtualWidth / 2, this.virtualHeight / 2, 80,
+      this.virtualWidth / 2, this.virtualHeight / 2, 800
+    );
+    radialGrad.addColorStop(0, 'rgba(45, 109, 61, 0.45)');  // center bright grass highlight
+    radialGrad.addColorStop(1, 'rgba(15, 38, 16, 0.45)');   // outer deep border green
+    ctx.fillStyle = radialGrad;
+    ctx.fillRect(0, 0, this.virtualWidth, this.virtualHeight);
+
+    // 4. Generate thousands of tiny, highly detailed grass blades
+    // Draw 5000 tiny blades of grass to make a truly dense sod/felt!
+    ctx.lineWidth = 1.0;
+    for (let i = 0; i < 5000; i++) {
+      const gx = Math.random() * this.virtualWidth;
+      const gy = Math.random() * this.virtualHeight;
+      const len = 3 + Math.random() * 5;
+      const angle = (Math.random() - 0.5) * 0.4; // slight tilt
+
+      // Pick organic grass green variants
+      const greens = [
+        'rgba(34, 95, 42, 0.7)',   // Forest green
+        'rgba(27, 86, 36, 0.65)',  // Deep green
+        'rgba(45, 137, 59, 0.55)',  // Medium emerald
+        'rgba(30, 72, 38, 0.75)',   // Olive grass
+        'rgba(74, 166, 88, 0.35)'   // Sunny lime highlight
+      ];
+      ctx.strokeStyle = greens[Math.floor(Math.random() * greens.length)];
+
+      ctx.beginPath();
+      ctx.moveTo(gx, gy);
+      ctx.quadraticCurveTo(
+        gx + angle * len * 0.5, gy - len * 0.5,
+        gx + angle * len, gy - len
+      );
+      ctx.stroke();
+    }
+
+    // 5. Draw tiny clover patches in the turf
+    for (let i = 0; i < 40; i++) {
+      const cx = Math.random() * this.virtualWidth;
+      const cy = Math.random() * this.virtualHeight;
+      const s = 1.5 + Math.random() * 1.5;
+      ctx.fillStyle = 'rgba(21, 128, 61, 0.45)'; // Subtle green clover color
+
+      // Tiny 3-leaf shape
+      ctx.beginPath(); ctx.arc(cx - s*0.5, cy - s*0.2, s, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + s*0.5, cy - s*0.2, s, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy + s*0.3, s, 0, Math.PI*2); ctx.fill();
+    }
+
+    // 6. Draw subtle soil/dirt spots for organic depth
+    for (let i = 0; i < 15; i++) {
+      const dx = Math.random() * this.virtualWidth;
+      const dy = Math.random() * this.virtualHeight;
+      const dr = 1 + Math.random() * 2;
+      ctx.fillStyle = 'rgba(45, 26, 15, 0.15)'; // faint mud dirt
+      ctx.beginPath();
+      ctx.arc(dx, dy, dr, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    this.grassTexture = grassCanvas;
   }
 
   setupResponsiveness() {
@@ -847,37 +955,63 @@ class GameEngine {
     this.ctx.save();
     this.ctx.scale(scaleX, scaleY);
     
-    // 1. Lush Green Grass Field base
-    this.ctx.fillStyle = '#1e4a38';
-    this.ctx.fillRect(0, 0, this.virtualWidth, this.virtualHeight);
+    // 1. Lush Pre-rendered Grass Pasture base
+    if (this.grassTexture) {
+      this.ctx.drawImage(this.grassTexture, 0, 0);
+    } else {
+      this.ctx.fillStyle = '#1c4422';
+      this.ctx.fillRect(0, 0, this.virtualWidth, this.virtualHeight);
+    }
     
-    // Radial glow to simulate sunlight on the pasture field
-    const feltGlow = this.ctx.createRadialGradient(
-      this.virtualWidth/2, this.virtualHeight/2, 100,
-      this.virtualWidth/2, this.virtualHeight/2, 850
-    );
-    feltGlow.addColorStop(0, '#2b634b');
-    feltGlow.addColorStop(1, '#1e4a38');
-    this.ctx.fillStyle = feltGlow;
-    this.ctx.fillRect(0, 0, this.virtualWidth, this.virtualHeight);
-    
-    // 2. Draw grass blades
-    this.ctx.strokeStyle = '#2b634b';
-    this.ctx.lineWidth = 1.5;
+    // 2. Draw detailed multi-toned grass blades
     this.grassTufts.forEach(tuft => {
+      this.ctx.save();
+      this.ctx.translate(tuft.x, tuft.y);
+      const h = tuft.length;
+      
+      // Shadow behind blades
+      this.ctx.strokeStyle = 'rgba(10, 35, 10, 0.25)';
+      this.ctx.lineWidth = 2.5;
       this.ctx.beginPath();
-      this.ctx.moveTo(tuft.x, tuft.y);
-      this.ctx.lineTo(tuft.x - 2, tuft.y - tuft.length);
-      this.ctx.moveTo(tuft.x, tuft.y);
-      this.ctx.lineTo(tuft.x, tuft.y - tuft.length * 1.2);
-      this.ctx.moveTo(tuft.x, tuft.y);
-      this.ctx.lineTo(tuft.x + 2, tuft.y - tuft.length);
+      this.ctx.moveTo(1, 1);
+      this.ctx.quadraticCurveTo(-h*0.3 + 1, -h*0.5 + 1, -h*0.5 + 1, -h*0.9 + 1);
       this.ctx.stroke();
+
+      // Curved Left blade (dark green)
+      this.ctx.strokeStyle = '#143f17';
+      this.ctx.lineWidth = 1.8;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, 0);
+      this.ctx.quadraticCurveTo(-h*0.3, -h*0.5, -h*0.5, -h * 0.9);
+      this.ctx.stroke();
+      
+      // Middle blade (emerald green)
+      this.ctx.strokeStyle = '#1b5c20';
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, 0);
+      this.ctx.quadraticCurveTo(0, -h*0.6, h*0.1, -h * 1.15);
+      this.ctx.stroke();
+      
+      // Curved Right blade (pasture light green)
+      this.ctx.strokeStyle = '#22c55e';
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, 0);
+      this.ctx.quadraticCurveTo(h*0.35, -h*0.5, h*0.55, -h * 0.85);
+      this.ctx.stroke();
+      
+      this.ctx.restore();
     });
 
-    // 3. Draw Buttercups & Daisies
+    // 3. Draw Buttercups, Daisies & 3-Leaf Clovers
     this.flowers.forEach(flower => {
+      // Soft shadow under foliage
+      this.ctx.beginPath();
+      this.ctx.arc(flower.x + 1, flower.y + 1, flower.size * 1.1, 0, Math.PI * 2);
+      this.ctx.fillStyle = 'rgba(10, 25, 10, 0.35)';
+      this.ctx.fill();
+
       if (flower.type === 'buttercup') {
+        // Buttercup golden star
         this.ctx.beginPath();
         this.ctx.arc(flower.x, flower.y, flower.size, 0, Math.PI * 2);
         this.ctx.fillStyle = '#f5c453';
@@ -886,54 +1020,307 @@ class GameEngine {
         this.ctx.arc(flower.x, flower.y, flower.size * 0.4, 0, Math.PI * 2);
         this.ctx.fillStyle = '#d97706';
         this.ctx.fill();
-      } else {
+      } else if (flower.type === 'daisy') {
+        // Daisy white petals
         this.ctx.beginPath();
         this.ctx.arc(flower.x, flower.y, flower.size, 0, Math.PI * 2);
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fill();
         this.ctx.beginPath();
         this.ctx.arc(flower.x, flower.y, flower.size * 0.4, 0, Math.PI * 2);
-        this.ctx.fillStyle = '#f5c453';
+        this.ctx.fillStyle = '#eab308';
         this.ctx.fill();
+      } else {
+        // Dynamic 3-Leaf Clover drawing
+        this.ctx.save();
+        this.ctx.translate(flower.x, flower.y);
+        const s = flower.size * 0.7;
+        this.ctx.fillStyle = '#15803d'; // Rich clover green
+        
+        // Leaf 1 (Left)
+        this.ctx.beginPath(); this.ctx.arc(-s*0.6, -s*0.3, s, 0, Math.PI*2); this.ctx.fill();
+        // Leaf 2 (Right)
+        this.ctx.beginPath(); this.ctx.arc(s*0.6, -s*0.3, s, 0, Math.PI*2); this.ctx.fill();
+        // Leaf 3 (Bottom)
+        this.ctx.beginPath(); this.ctx.arc(0, s*0.4, s, 0, Math.PI*2); this.ctx.fill();
+        
+        // Small clover stem
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = '#14532d';
+        this.ctx.lineWidth = s * 0.35;
+        this.ctx.moveTo(0, 0);
+        this.ctx.quadraticCurveTo(s*0.6, s*1.3, s*0.3, s*1.8);
+        this.ctx.stroke();
+        
+        this.ctx.restore();
       }
     });
 
-    // 4. Draw Cushions/Rails as rustic wooden logs
-    this.ctx.strokeStyle = '#543015'; // bark dark brown
-    this.ctx.lineWidth = 14;
-    this.ctx.strokeRect(7, 7, this.virtualWidth - 14, this.virtualHeight - 14);
-    
-    // Draw wood grain details on logs
-    this.ctx.strokeStyle = '#42240e';
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-    this.ctx.moveTo(14, 7); this.ctx.lineTo(this.virtualWidth - 14, 7);
-    this.ctx.moveTo(14, 11); this.ctx.lineTo(this.virtualWidth - 14, 11);
-    this.ctx.moveTo(14, this.virtualHeight - 7); this.ctx.lineTo(this.virtualWidth - 14, this.virtualHeight - 7);
-    this.ctx.moveTo(14, this.virtualHeight - 11); this.ctx.lineTo(this.virtualWidth - 14, this.virtualHeight - 11);
-    this.ctx.moveTo(7, 14); this.ctx.lineTo(7, this.virtualHeight - 14);
-    this.ctx.moveTo(11, 14); this.ctx.lineTo(11, this.virtualHeight - 14);
-    this.ctx.moveTo(this.virtualWidth - 7, 14); this.ctx.lineTo(this.virtualWidth - 7, this.virtualHeight - 14);
-    this.ctx.moveTo(this.virtualWidth - 11, 14); this.ctx.lineTo(this.virtualWidth - 11, this.virtualHeight - 14);
-    this.ctx.stroke();
+    // 4. Draw Cushions/Rails as rustic wooden double-rail corral fences with cross braces
+    const drawFenceWall = (ctx, rx, ry, rw, rh, isVert = false) => {
+      ctx.save();
+      ctx.translate(rx, ry);
 
-    // Rope joints at corners and side rails
-    this.ctx.strokeStyle = '#c4b5a5'; // rope gray-beige
-    this.ctx.lineWidth = 3;
-    const ropeJoint = (x, y) => {
+      const halfW = rw / 2;
+      const halfH = rh / 2;
+
+      // Outer rail is shifted outward, inner rail is shifted inward
+      const outOffset = -6;
+      const inOffset = 6;
+
+      const outerY = isVert ? 0 : outOffset;
+      const outerX = isVert ? outOffset : 0;
+      const outerW = isVert ? 6 : rw;
+      const outerH = isVert ? rh : 6;
+
+      const innerY = isVert ? 0 : inOffset;
+      const innerX = isVert ? inOffset : 0;
+      const innerW = isVert ? 10 : rw;
+      const innerH = isVert ? rh : 10;
+
+      // Draw shadow for both rails
+      ctx.fillStyle = 'rgba(10, 20, 10, 0.4)';
+      if (isVert) {
+        ctx.fillRect(outOffset - 3 + 2, -halfH + 2, 6, rh);
+        ctx.fillRect(inOffset - 5 + 2, -halfH + 2, 10, rh);
+      } else {
+        ctx.fillRect(-halfW + 2, outOffset - 3 + 2, rw, 6);
+        ctx.fillRect(-halfW + 2, inOffset - 5 + 2, rw, 10);
+      }
+
+      // Helper to draw a single log rail segment
+      const drawSingleRail = (x, y, w, h, thickness, colorGrad) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.fillStyle = colorGrad;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(-w/2, -h/2, w, h, 3);
+        } else {
+          ctx.rect(-w/2, -h/2, w, h);
+        }
+        ctx.fill();
+        ctx.strokeStyle = '#230f03';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Beautiful organic wood grain lines
+        ctx.strokeStyle = 'rgba(35, 15, 3, 0.35)';
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        if (isVert) {
+          ctx.moveTo(-w*0.15, -h/2 + 6); ctx.lineTo(-w*0.15, h/2 - 6);
+          ctx.moveTo(w*0.15, -h/2 + 8); ctx.lineTo(w*0.15, h/2 - 8);
+          // wood knot
+          ctx.arc(0, -h*0.15, 1.8, 0, Math.PI*2);
+        } else {
+          ctx.moveTo(-w/2 + 6, -h*0.15); ctx.lineTo(w/2 - 6, -h*0.15);
+          ctx.moveTo(-w/2 + 8, h*0.15); ctx.lineTo(w/2 - 8, h*0.15);
+          // wood knot
+          ctx.arc(-w*0.15, 0, 1.8, 0, Math.PI*2);
+        }
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      // Oak log linear bark-to-core wood gradients
+      const barkGradOuter = ctx.createLinearGradient(
+        isVert ? outOffset - 3 : 0, isVert ? 0 : outOffset - 3,
+        isVert ? outOffset + 3 : 0, isVert ? 0 : outOffset + 3
+      );
+      barkGradOuter.addColorStop(0, '#3f1f0a');
+      barkGradOuter.addColorStop(0.5, '#6e3816');
+      barkGradOuter.addColorStop(1, '#3f1f0a');
+
+      const barkGradInner = ctx.createLinearGradient(
+        isVert ? inOffset - 5 : 0, isVert ? 0 : inOffset - 5,
+        isVert ? inOffset + 5 : 0, isVert ? 0 : inOffset + 5
+      );
+      barkGradInner.addColorStop(0, '#311707');
+      barkGradInner.addColorStop(0.2, '#50280f');
+      barkGradInner.addColorStop(0.5, '#7b401b'); // oak inner heartwood
+      barkGradInner.addColorStop(0.8, '#50280f');
+      barkGradInner.addColorStop(1, '#311707');
+
+      // Draw rustic vertical connector slats bridging the rails
+      ctx.fillStyle = '#4c260d';
+      ctx.strokeStyle = '#230f03';
+      ctx.lineWidth = 1.2;
+      const slatSpacing = 35;
+      const startPos = -halfW + 15;
+      const endPos = halfW - 15;
+
+      for (let pos = startPos; pos <= endPos; pos += slatSpacing) {
+        ctx.save();
+        if (isVert) {
+          ctx.translate(0, pos);
+          ctx.fillRect(outOffset, -3, inOffset - outOffset, 6);
+          ctx.strokeRect(outOffset, -3, inOffset - outOffset, 6);
+          // Silver nails
+          ctx.fillStyle = '#9e9e9e';
+          ctx.beginPath();
+          ctx.arc(outOffset + 1.5, 0, 0.8, 0, Math.PI*2);
+          ctx.arc(inOffset - 1.5, 0, 0.8, 0, Math.PI*2);
+          ctx.fill();
+        } else {
+          ctx.translate(pos, 0);
+          ctx.fillRect(-3, outOffset, 6, inOffset - outOffset);
+          ctx.strokeRect(-3, outOffset, 6, inOffset - outOffset);
+          // Silver nails
+          ctx.fillStyle = '#9e9e9e';
+          ctx.beginPath();
+          ctx.arc(0, outOffset + 1.5, 0.8, 0, Math.PI*2);
+          ctx.arc(0, inOffset - 1.5, 0.8, 0, Math.PI*2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Draw agricultural X cross-braces in the middle sections of the rails
+      const drawXBrace = (centerPos) => {
+        ctx.save();
+        ctx.translate(isVert ? 0 : centerPos, isVert ? centerPos : 0);
+        ctx.strokeStyle = '#4a250c';
+        ctx.lineWidth = 2.5;
+
+        if (isVert) {
+          ctx.beginPath();
+          ctx.moveTo(outOffset, -12); ctx.lineTo(inOffset, 12);
+          ctx.moveTo(inOffset, -12); ctx.lineTo(outOffset, 12);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(-12, outOffset); ctx.lineTo(12, inOffset);
+          ctx.moveTo(-12, inOffset); ctx.lineTo(12, outOffset);
+          ctx.stroke();
+        }
+        ctx.restore();
+      };
+
+      if (rw > 250 || rh > 250) {
+        const len = isVert ? rh : rw;
+        drawXBrace(-len * 0.25);
+        drawXBrace(0);
+        drawXBrace(len * 0.25);
+      } else {
+        drawXBrace(0);
+      }
+
+      // Paint the horizontal/vertical outer and inner rails
+      drawSingleRail(outerX, outerY, outerW, outerH, 6, barkGradOuter);
+      drawSingleRail(innerX, innerY, innerW, innerH, 10, barkGradInner);
+
+      ctx.restore();
+    };
+
+    // Draw the 6 individual double-rail corral walls
+    // Top Horizontal Fence Wall
+    drawFenceWall(this.ctx, 250, 14, 395, 16, false);
+    // Bottom Horizontal Fence Wall
+    drawFenceWall(this.ctx, 250, 986, 395, 16, false);
+    // Left Vertical Fence Walls (split by middle pocket)
+    drawFenceWall(this.ctx, 14, 260, 16, 400, true);
+    drawFenceWall(this.ctx, 14, 740, 16, 400, true);
+    // Right Vertical Fence Walls (split by middle pocket)
+    drawFenceWall(this.ctx, 486, 260, 16, 400, true);
+    drawFenceWall(this.ctx, 486, 740, 16, 400, true);
+
+    // 5. Draw circular cut log posts at corners & pocket midpoints
+    const drawFencePost = (ctx, px, py, pr) => {
+      ctx.save();
+      // Post shadow
+      ctx.beginPath(); ctx.arc(px+3, py+3, pr, 0, Math.PI*2); ctx.fillStyle = 'rgba(10,20,10,0.5)'; ctx.fill();
+      
+      // Bark base
+      ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI*2); ctx.fillStyle = '#421f07'; ctx.fill();
+      ctx.strokeStyle = '#230f03'; ctx.lineWidth = 2; ctx.stroke();
+      
+      // Cut wood core top
+      ctx.beginPath(); ctx.arc(px, py, pr - 3, 0, Math.PI*2); ctx.fillStyle = '#b5865a'; ctx.fill();
+      ctx.strokeStyle = '#8a5c33'; ctx.lineWidth = 1.2; ctx.stroke();
+      
+      // Growth rings
+      ctx.strokeStyle = 'rgba(66, 31, 7, 0.25)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(px, py, pr * 0.65, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(px, py, pr * 0.35, 0, Math.PI*2); ctx.stroke();
+      
+      // Log radial crack
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + pr * 0.5, py - pr * 0.2);
+      ctx.strokeStyle = '#230f03';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      
+      ctx.restore();
+    };
+
+    // Draw the fence posts directly adjacent to pockets
+    drawFencePost(this.ctx, 32, 32, 14);                // Top-Left corner
+    drawFencePost(this.ctx, this.virtualWidth - 32, 32, 14); // Top-Right corner
+    drawFencePost(this.ctx, 32, this.virtualHeight - 32, 14); // Bottom-Left corner
+    drawFencePost(this.ctx, this.virtualWidth - 32, this.virtualHeight - 32, 14); // Bottom-Right corner
+    drawFencePost(this.ctx, 14, 500, 12);               // Mid-Left post
+    drawFencePost(this.ctx, this.virtualWidth - 14, 500, 12); // Mid-Right post
+
+    // Rope binds wrapped around corners/joins
+    this.ctx.strokeStyle = '#bfac95'; // Rope fiber color
+    this.ctx.lineWidth = 2.5;
+    const ropeWrap = (rx, ry) => {
       this.ctx.beginPath();
-      this.ctx.moveTo(x - 8, y - 8); this.ctx.lineTo(x + 8, y + 8);
-      this.ctx.moveTo(x + 8, y - 8); this.ctx.lineTo(x - 8, y + 8);
+      this.ctx.moveTo(rx - 8, ry - 8); this.ctx.lineTo(rx + 8, ry + 8);
+      this.ctx.moveTo(rx + 8, ry - 8); this.ctx.lineTo(rx - 8, ry + 8);
       this.ctx.stroke();
     };
-    ropeJoint(14, 14);
-    ropeJoint(this.virtualWidth - 14, 14);
-    ropeJoint(14, this.virtualHeight - 14);
-    ropeJoint(this.virtualWidth - 14, this.virtualHeight - 14);
+    ropeWrap(32, 32);
+    ropeWrap(this.virtualWidth - 32, 32);
+    ropeWrap(32, this.virtualHeight - 32);
+    ropeWrap(this.virtualWidth - 32, this.virtualHeight - 32);
+    ropeWrap(14, 500);
+    ropeWrap(this.virtualWidth - 14, 500);
 
-    // Inner log lines
-    this.ctx.strokeStyle = '#12261d'; // dark fence grass shadow
-    this.ctx.lineWidth = 6;
+    // 6. Draw border grass tufts that peek OVER the fence rails, creating gorgeous layered 3D depth!
+    this.borderGrassTufts.forEach(tuft => {
+      this.ctx.save();
+      this.ctx.translate(tuft.x, tuft.y);
+      const h = tuft.length;
+      
+      // Shadow behind blades
+      this.ctx.strokeStyle = 'rgba(10, 35, 10, 0.2)';
+      this.ctx.lineWidth = 2.2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(1, 1);
+      this.ctx.quadraticCurveTo(-h*0.25 + 1, -h*0.45 + 1, -h*0.45 + 1, -h*0.8 + 1);
+      this.ctx.stroke();
+
+      // Curved Left blade (dark pasture green)
+      this.ctx.strokeStyle = '#123915';
+      this.ctx.lineWidth = 1.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, 0);
+      this.ctx.quadraticCurveTo(-h*0.25, -h*0.45, -h*0.45, -h * 0.8);
+      this.ctx.stroke();
+      
+      // Middle blade (vivid clover green)
+      this.ctx.strokeStyle = '#166534';
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, 0);
+      this.ctx.quadraticCurveTo(0, -h*0.5, h*0.08, -h * 1.05);
+      this.ctx.stroke();
+      
+      // Curved Right blade (bright lime highlights)
+      this.ctx.strokeStyle = '#4ade80';
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, 0);
+      this.ctx.quadraticCurveTo(h*0.3, -h*0.45, h*0.5, -h * 0.75);
+      this.ctx.stroke();
+      
+      this.ctx.restore();
+    });
+
+    // Inner log boundaries shadow (the cushion impact edge)
+    this.ctx.strokeStyle = '#112d1b';
+    this.ctx.lineWidth = 4;
     this.ctx.strokeRect(28, 28, this.virtualWidth - 56, this.virtualHeight - 56);
     
     this.ctx.restore(); // BACK to unscaled normal screen pixel coordinates!
