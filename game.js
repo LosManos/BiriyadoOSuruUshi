@@ -371,6 +371,7 @@ class GameEngine {
     this.turnCount = 1;
     this.activePlayer = 1; // 1 or 2
     this.selectedCows = ['SLB', null]; // Player 2 defaults to null on setup!
+    this.myPlayerNumber = null; // Local device player identity (1 or 2)
     
     this.balls = [];
     this.sunkBalls = [];
@@ -656,6 +657,17 @@ class GameEngine {
       this.activePlayer = state.a;
       this.selectedCows = state.c || ['SLB', null];
       
+      // Auto-detect and set local device player identity upon deserializing
+      if (!this.myPlayerNumber) {
+        if (state.a === 2 && (!state.c || state.c[1] === null)) {
+          this.myPlayerNumber = 2; // Joining as Player 2
+        } else if (state.a === 1) {
+          this.myPlayerNumber = 1; // Resuming as Player 1
+        } else {
+          this.myPlayerNumber = state.a; // Fallback guess
+        }
+      }
+      
       // Load cue ball
       this.balls = [{
         id: 0,
@@ -705,8 +717,12 @@ class GameEngine {
 
   // --- Aiming Controls (Portrait dragging) ---
   handleDragStart(clientX, clientY) {
-    // Lock controls during rolling OR if Player 2's breed select overlay is active!
-    if (this.isRolling || (this.activePlayer === 2 && this.selectedCows[1] === null)) return;
+    // Lock controls during rolling, if it's not this player's turn, OR if Player 2's breed select overlay is active!
+    if (this.isRolling || 
+        this.activePlayer !== this.myPlayerNumber || 
+        (this.activePlayer === 2 && this.selectedCows[1] === null)) {
+      return;
+    }
     
     const pos = this.canvasToVirtual(clientX, clientY);
     const cueBall = this.balls.find(b => b.isCue);
@@ -936,7 +952,7 @@ class GameEngine {
   // --- DYNAMIC IN-GAME SELECTOR CHECKER ---
   checkInGameSelector() {
     const overlay = document.getElementById('in-game-selector');
-    if (this.activePlayer === 2 && this.selectedCows[1] === null) {
+    if (this.myPlayerNumber === 2 && this.activePlayer === 2 && this.selectedCows[1] === null) {
       overlay.classList.add('active');
     } else {
       overlay.classList.remove('active');
@@ -1487,6 +1503,9 @@ class GameEngine {
     const activeLabel = document.getElementById('lbl-active-player');
     const p1Container = document.getElementById('hud-p1');
     const p2Container = document.getElementById('hud-p2');
+    const helpText = document.getElementById('help-text');
+    
+    const isMyTurn = this.activePlayer === this.myPlayerNumber;
     
     if (this.activePlayer === 1) {
       activeLabel.textContent = `${COW_BREEDS[p1Key].name.split(' ')[0]}'s Turn!`;
@@ -1501,11 +1520,24 @@ class GameEngine {
       p1Container.style.opacity = '0.35';
       p2Container.style.opacity = '1';
     }
+    
+    if (helpText) {
+      if (isMyTurn) {
+        helpText.textContent = "Drag backward from the Cue Ball (White/Spotted) to shoot!";
+        helpText.style.color = "var(--text-muted)";
+      } else {
+        const nextPlayerName = this.activePlayer === 1 ? COW_BREEDS[p1Key].name : (p2Key ? COW_BREEDS[p2Key].name : "Co-Player 2");
+        helpText.textContent = `Waiting for ${nextPlayerName} to play and share their QR turn! 🐮💤`;
+        helpText.style.color = "var(--color-accent)";
+      }
+    }
   }
 
   updateControlsUI() {
     const btnShare = document.getElementById('btn-share-turn');
-    if (this.isRolling || this.balls.length <= 1) {
+    const isMyTurn = this.activePlayer === this.myPlayerNumber;
+    
+    if (this.isRolling || this.balls.length <= 1 || !isMyTurn) {
       btnShare.disabled = true;
       btnShare.classList.add('btn-disabled');
     } else {
@@ -1564,6 +1596,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Start game triggers
   btnStartGame.addEventListener('click', () => {
+    game.myPlayerNumber = 1; // Explicitly Player 1!
     game.selectedCows = [p1Selected, null];
     game.turnCount = 1;
     game.activePlayer = 1;
@@ -1682,7 +1715,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 3. Construct direct URL link query parameter using the resolved server IP
     const protocol = window.location.protocol; // https:
-    const baseUri = `${protocol}//${game.serverIp}:${game.serverPort}${window.location.pathname}`;
+    const portSuffix = game.serverPort ? `:${game.serverPort}` : "";
+    const baseUri = `${protocol}//${game.serverIp}${portSuffix}${window.location.pathname}`;
     const shareUrl = `${baseUri}?s=${base64State}`;
     
     // 4. Generate QR code pointing directly to the link!
@@ -1853,6 +1887,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Reset match button
   document.getElementById('btn-reset-match').addEventListener('click', () => {
     if (confirm("Reset the match? This will restore all 6 balls.")) {
+      game.myPlayerNumber = 1; // Explicitly Player 1!
       game.turnCount = 1;
       game.activePlayer = 1;
       game.selectedCows = [p1Selected, null];
