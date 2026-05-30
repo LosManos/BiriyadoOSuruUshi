@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Biriyado o Suru Ushi | Billiards-Playing Cow</title>
+  
+  <!-- Premium Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS is avoided per guidelines; clean Vanilla CSS used instead -->
+  <link rel="stylesheet" href="index.css">
+
+  <!-- Core QR & Scanning Libraries (Fully client-side & offline-capable) -->
+  <!-- jsQR for real-time camera decoding -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <!-- qrcodejs for high-quality client-side QR generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- ==================== SCREEN 1: START / CHARACTER SELECT ==================== -->
+    <section id="screen-start" class="screen active">
+      <header class="start-header">
+        <div class="logo-area">
+          <div class="cow-spotted-ring">
+            <span class="emoji-logo">🐮🎱</span>
+          </div>
+          <h1>Biriyado o Suru Ushi</h1>
+          <p class="subtitle">The Billiards-Playing Cow</p>
+        </div>
+        <p class="tagline">A cozy, cooperative pool game where you share turns offline by scanning QR codes!</p>
+      </header>
+
+      <main class="start-main">
+        <div class="setup-container">
+          
+          <!-- Co-Player 1 Selection -->
+          <div class="cow-selector" id="p1-selector">
+            <div class="selector-title">Co-Player 1</div>
+            <div class="avatar-preview" id="p1-preview">
+              <!-- Inline Dynamic SVG will be rendered here by JS -->
+            </div>
+            <div class="cow-breed-name" id="p1-breed-name">Swedish SLB</div>
+            <div class="selector-arrows">
+              <button class="arrow-btn prev" data-player="1">←</button>
+              <span class="selection-status">Choose Breed</span>
+              <button class="arrow-btn next" data-player="1">→</button>
+            </div>
+          </div>
+
+          <!-- VS Chime/Icon -->
+          <div class="vs-divider">&amp;</div>
+
+          <!-- Co-Player 2 Selection -->
+          <div class="cow-selector" id="p2-selector">
+            <div class="selector-title">Co-Player 2</div>
+            <div class="avatar-preview" id="p2-preview">
+              <!-- Inline Dynamic SVG will be rendered here by JS -->
+            </div>
+            <div class="cow-breed-name" id="p2-breed-name">Japanese Mishima</div>
+            <div class="selector-arrows">
+              <button class="arrow-btn prev" data-player="2">←</button>
+              <span class="selection-status">Choose Breed</span>
+              <button class="arrow-btn next" data-player="2">→</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Breed details card that updates dynamically -->
+        <div class="breed-card-display" id="breed-card">
+          <h3 id="card-title">Swedish SLB</h3>
+          <p id="card-desc">The iconic black-and-white cow. Friendly, highly skilled, and has a classic, heartwarming moo chime.</p>
+          <div class="breed-badge" id="card-badge">Classic Dairy Champion</div>
+        </div>
+
+        <button id="btn-start-game" class="btn btn-primary btn-glowing">
+          Let's Play Pool! 🐄💨
+        </button>
+      </main>
+
+      <footer class="start-footer">
+        <p>Fully client-side &bull; Play anywhere offline</p>
+      </footer>
+    </section>
+
+    <!-- ==================== SCREEN 2: MAIN GAME ARENA ==================== -->
+    <section id="screen-game" class="screen">
+      
+      <!-- HUD / Top Bar -->
+      <header class="game-hud">
+        <div class="hud-player" id="hud-p1">
+          <div class="hud-avatar" id="hud-p1-avatar"></div>
+          <div class="hud-info">
+            <span class="hud-label">Player 1</span>
+            <span class="hud-name" id="hud-p1-name">SLB</span>
+          </div>
+        </div>
+
+        <div class="hud-middle">
+          <div class="turn-counter">
+            <span class="turn-number" id="lbl-turn-count">Turn 1</span>
+          </div>
+          <div class="turn-badge" id="lbl-active-player">Your Turn!</div>
+        </div>
+
+        <div class="hud-player" id="hud-p2">
+          <div class="hud-avatar" id="hud-p2-avatar"></div>
+          <div class="hud-info">
+            <span class="hud-label">Player 2</span>
+            <span class="hud-name" id="hud-p2-name">Mishima</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Canvas Container -->
+      <main class="canvas-container">
+        <div class="physics-warning" id="physics-notice">Balls are rolling... 🎱</div>
+        <div class="pocket-message" id="pocket-notice">Nice shot! 🐮🎉</div>
+        
+        <!-- Table aspect ratio is maintained in CSS -->
+        <div class="canvas-wrapper">
+          <canvas id="game-canvas"></canvas>
+        </div>
+
+        <div class="interaction-help" id="help-text">
+          Drag backward from the Cue Ball (White/Spotted) to shoot!
+        </div>
+      </main>
+
+      <!-- Bottom HUD Controls -->
+      <footer class="game-controls">
+        <button id="btn-scan-turn" class="btn btn-secondary flex-btn">
+          <span class="btn-icon">📷</span> Scan Partner's Turn
+        </button>
+        <button id="btn-share-turn" class="btn btn-primary flex-btn btn-disabled" disabled>
+          <span class="btn-icon">🔗</span> Share My Turn (QR)
+        </button>
+      </footer>
+      
+      <!-- Tiny secondary option bar -->
+      <div class="sub-controls">
+        <button id="btn-reset-match" class="btn btn-text">Reset Match</button>
+        <button id="btn-sound-toggle" class="btn btn-text">🔊 Sound: On</button>
+        <button id="btn-change-cows" class="btn btn-text">Choose Cows</button>
+      </div>
+    </section>
+
+    <!-- ==================== MODAL 1: SHARE QR CODE ==================== -->
+    <div id="modal-share" class="modal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <header class="modal-header">
+          <h2>Share Your Game State</h2>
+          <button class="modal-close-btn">&times;</button>
+        </header>
+        <main class="modal-body share-body">
+          <p class="modal-desc">
+            Let your co-player scan this QR code with their game camera. It transfers your cow positions and turn details instantly!
+          </p>
+          
+          <div class="qr-container-wrapper">
+            <div id="qr-code-target"></div>
+          </div>
+          
+          <div class="state-summary-card">
+            <div class="summary-line">
+              <span class="summary-label">Next Turn:</span>
+              <span class="summary-value" id="qr-next-cow-name">Japanese Mishima</span>
+            </div>
+            <div class="summary-line">
+              <span class="summary-label">Balls Remaining:</span>
+              <span class="summary-value" id="qr-balls-count">6 / 6</span>
+            </div>
+          </div>
+        </main>
+        <footer class="modal-footer">
+          <button class="btn btn-primary modal-close-action">All Done!</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL 2: CAMERA SCANNER ==================== -->
+    <div id="modal-scan" class="modal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content full-screen-modal">
+        <header class="modal-header transparent-header">
+          <h2>Scanning Co-Player's Turn</h2>
+          <button class="modal-close-btn">&times;</button>
+        </header>
+        <main class="modal-body scan-body">
+          <!-- Camera video stream -->
+          <video id="scan-video" playsinline></video>
+          
+          <!-- Animated overlay frame -->
+          <div class="scan-overlay-container">
+            <div class="scan-target-frame">
+              <div class="corner tl"></div>
+              <div class="corner tr"></div>
+              <div class="corner bl"></div>
+              <div class="corner br"></div>
+              <div class="scan-line"></div>
+            </div>
+            <div class="scan-instructions">
+              Aim your camera at the QR code on your partner's screen.
+            </div>
+            <div class="scan-feedback-message" id="scan-feedback">
+              Initializing camera... 🐮
+            </div>
+          </div>
+        </main>
+        <footer class="modal-footer bottom-sticky-footer">
+          <button class="btn btn-secondary modal-close-action">Cancel Scan</button>
+        </footer>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- The core game logic file -->
+  <script src="game.js"></script>
+</body>
+</html>
