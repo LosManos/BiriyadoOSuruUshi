@@ -335,6 +335,108 @@ class SoundManager {
 const sounds = new SoundManager();
 
 // --- 3. PHYSICS & GAME STATE MANAGER ---
+
+// Rotates a 3D vector v around a unit axis (ax, ay, az) by a given angle in radians using Rodrigues' formula
+function rotateVector(v, ax, ay, az, angle) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const dot = ax * v[0] + ay * v[1] + az * v[2];
+  
+  // Cross product: a x v
+  const cx = ay * v[2] - az * v[1];
+  const cy = az * v[0] - ax * v[2];
+  const cz = ax * v[1] - ay * v[0];
+  
+  return [
+    v[0] * cos + cx * sin + ax * dot * (1 - cos),
+    v[1] * cos + cy * sin + ay * dot * (1 - cos),
+    v[2] * cos + cz * sin + az * dot * (1 - cos)
+  ];
+}
+
+// Performs Gram-Schmidt orthonormalization after LERPing local axes rx, ry, rz towards identity
+function lerpResetOrientation(ball, t = 0.08) {
+  const targetRx = [1, 0, 0];
+  const targetRy = [0, 1, 0];
+  const targetRz = [0, 0, 1];
+  
+  // 1. Lerp rz toward [0, 0, 1]
+  const rz_x = ball.rz[0] * (1 - t) + targetRz[0] * t;
+  const rz_y = ball.rz[1] * (1 - t) + targetRz[1] * t;
+  const rz_z = ball.rz[2] * (1 - t) + targetRz[2] * t;
+  
+  // Normalize rz
+  const lenZ = Math.hypot(rz_x, rz_y, rz_z);
+  if (lenZ > 0) {
+    ball.rz = [rz_x / lenZ, rz_y / lenZ, rz_z / lenZ];
+  } else {
+    ball.rz = [0, 0, 1];
+  }
+  
+  // 2. Lerp rx toward [1, 0, 0]
+  const rx_x = ball.rx[0] * (1 - t) + targetRx[0] * t;
+  const rx_y = ball.rx[1] * (1 - t) + targetRx[1] * t;
+  const rx_z = ball.rx[2] * (1 - t) + targetRx[2] * t;
+  
+  // Orthogonalize rx relative to rz
+  const dotXZ = rx_x * ball.rz[0] + rx_y * ball.rz[1] + rx_z * ball.rz[2];
+  const orthoRx_x = rx_x - dotXZ * ball.rz[0];
+  const orthoRx_y = rx_y - dotXZ * ball.rz[1];
+  const orthoRx_z = rx_z - dotXZ * ball.rz[2];
+  
+  // Normalize rx
+  const lenX = Math.hypot(orthoRx_x, orthoRx_y, orthoRx_z);
+  if (lenX > 0) {
+    ball.rx = [orthoRx_x / lenX, orthoRx_y / lenX, orthoRx_z / lenX];
+  } else {
+    ball.rx = [1, 0, 0];
+  }
+  
+  // 3. ry is cross product rz x rx to maintain perfect right-handed orthonormality
+  ball.ry = [
+    ball.rz[1] * ball.rx[2] - ball.rz[2] * ball.rx[1],
+    ball.rz[2] * ball.rx[0] - ball.rz[0] * ball.rx[2],
+    ball.rz[0] * ball.rx[1] - ball.rz[1] * ball.rx[0]
+  ];
+  
+  // 4. Check if we are close enough to identity to snap and finish resetting
+  if (Math.abs(ball.rz[2] - 1) < 0.001 && Math.abs(ball.rx[0] - 1) < 0.001) {
+    ball.rx = [1, 0, 0];
+    ball.ry = [0, 1, 0];
+    ball.rz = [0, 0, 1];
+    ball.isResetting = false;
+  }
+}
+
+// Draws a beautiful 3D-perspective projected golden star
+function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius, color) {
+  let rot = Math.PI / 2 * 3;
+  let x = cx;
+  let y = cy;
+  let step = Math.PI / spikes;
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - outerRadius);
+  for (let i = 0; i < spikes; i++) {
+    x = cx + Math.cos(rot) * outerRadius;
+    y = cy + Math.sin(rot) * outerRadius;
+    ctx.lineTo(x, y);
+    rot += step;
+
+    x = cx + Math.cos(rot) * innerRadius;
+    y = cy + Math.sin(rot) * innerRadius;
+    ctx.lineTo(x, y);
+    rot += step;
+  }
+  ctx.lineTo(cx, cy - outerRadius);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = '#d97706'; // Darker gold outline for gorgeous contrast
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+}
+
 class GameEngine {
   constructor(canvas) {
     this.canvas = canvas;
@@ -586,7 +688,12 @@ class GameEngine {
       isCue: true,
       color: '#ffffff',
       scale: 1,
-      sinking: false
+      sinking: false,
+      rx: [1, 0, 0],
+      ry: [0, 1, 0],
+      rz: [0, 0, 1],
+      stoppedTime: Date.now(),
+      isResetting: false
     });
     
     // 2. 6-Ball Triangle Rack placed pointing down, apexed at (250, 320)
@@ -607,16 +714,16 @@ class GameEngine {
     const dy = 25.98 * aspectCorrection; 
     
     // Row 1 (Apex ball)
-    this.balls.push({ id: 1, x: apexX, y: apexY, vx: 0, vy: 0, radius: this.ballRadius, color: '#f5c453', scale: 1, sinking: false });
+    this.balls.push({ id: 1, x: apexX, y: apexY, vx: 0, vy: 0, radius: this.ballRadius, color: '#f5c453', scale: 1, sinking: false, rx: [1, 0, 0], ry: [0, 1, 0], rz: [0, 0, 1], stoppedTime: Date.now(), isResetting: false });
     
     // Row 2 (y = apexY - dy)
-    this.balls.push({ id: 2, x: apexX - dx/2, y: apexY - dy, vx: 0, vy: 0, radius: this.ballRadius, color: '#3b82f6', scale: 1, sinking: false });
-    this.balls.push({ id: 3, x: apexX + dx/2, y: apexY - dy, vx: 0, vy: 0, radius: this.ballRadius, color: '#ef4444', scale: 1, sinking: false });
+    this.balls.push({ id: 2, x: apexX - dx/2, y: apexY - dy, vx: 0, vy: 0, radius: this.ballRadius, color: '#3b82f6', scale: 1, sinking: false, rx: [1, 0, 0], ry: [0, 1, 0], rz: [0, 0, 1], stoppedTime: Date.now(), isResetting: false });
+    this.balls.push({ id: 3, x: apexX + dx/2, y: apexY - dy, vx: 0, vy: 0, radius: this.ballRadius, color: '#ef4444', scale: 1, sinking: false, rx: [1, 0, 0], ry: [0, 1, 0], rz: [0, 0, 1], stoppedTime: Date.now(), isResetting: false });
     
     // Row 3 (y = apexY - 2*dy)
-    this.balls.push({ id: 4, x: apexX - dx, y: apexY - dy * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#a855f7', scale: 1, sinking: false });
-    this.balls.push({ id: 5, x: apexX, y: apexY - dy * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#f97316', scale: 1, sinking: false });
-    this.balls.push({ id: 6, x: apexX + dx, y: apexY - dy * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#10b981', scale: 1, sinking: false });
+    this.balls.push({ id: 4, x: apexX - dx, y: apexY - dy * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#a855f7', scale: 1, sinking: false, rx: [1, 0, 0], ry: [0, 1, 0], rz: [0, 0, 1], stoppedTime: Date.now(), isResetting: false });
+    this.balls.push({ id: 5, x: apexX, y: apexY - dy * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#f97316', scale: 1, sinking: false, rx: [1, 0, 0], ry: [0, 1, 0], rz: [0, 0, 1], stoppedTime: Date.now(), isResetting: false });
+    this.balls.push({ id: 6, x: apexX + dx, y: apexY - dy * 2, vx: 0, vy: 0, radius: this.ballRadius, color: '#10b981', scale: 1, sinking: false, rx: [1, 0, 0], ry: [0, 1, 0], rz: [0, 0, 1], stoppedTime: Date.now(), isResetting: false });
     
     this.isRolling = false;
     this.isDragging = false;
@@ -679,7 +786,12 @@ class GameEngine {
         isCue: true,
         color: '#ffffff',
         scale: 1,
-        sinking: false
+        sinking: false,
+        rx: [1, 0, 0],
+        ry: [0, 1, 0],
+        rz: [0, 0, 1],
+        stoppedTime: Date.now(),
+        isResetting: false
       }];
       
       // Load target balls
@@ -693,7 +805,12 @@ class GameEngine {
           radius: this.ballRadius,
           color: b.c || '#f5c453',
           scale: 1,
-          sinking: false
+          sinking: false,
+          rx: [1, 0, 0],
+          ry: [0, 1, 0],
+          rz: [0, 0, 1],
+          stoppedTime: Date.now(),
+          isResetting: false
         });
       });
       
@@ -780,11 +897,27 @@ class GameEngine {
 
   // --- ENGINE UPDATE LOOP ---
   update() {
+    // 1. Smooth Orientation Auto-Reset (always active, updates still balls)
+    this.balls.forEach(ball => {
+      if (ball.vx === 0 && ball.vy === 0 && !ball.sinking) {
+        if (ball.stoppedTime === null) {
+          ball.stoppedTime = Date.now();
+        }
+        if (Date.now() - ball.stoppedTime > 1000) {
+          ball.isResetting = true;
+        }
+        if (ball.isResetting) {
+          lerpResetOrientation(ball, 0.08);
+        }
+      }
+    });
+
+    // 2. Core Physics Update (only if balls are rolling)
     if (!this.isRolling) return;
     
     let anyRolling = false;
     
-    // 1. Move and check bounds
+    // Move and check bounds
     this.balls.forEach(ball => {
       if (ball.sinking) {
         // Spiral and shrink toward the pocket center
@@ -810,19 +943,38 @@ class GameEngine {
         return;
       }
       
-      // Standard linear friction damping
-      ball.x += ball.vx;
-      ball.y += ball.vy;
+      // Standard linear friction damping with 3D rotation update
+      const dx = ball.vx;
+      const dy = ball.vy;
+      const speed = Math.hypot(dx, dy);
+
+      ball.x += dx;
+      ball.y += dy;
       
       ball.vx *= this.friction;
       ball.vy *= this.friction;
       
       // Stop moving if speed is negligible
-      if (Math.hypot(ball.vx, ball.vy) < 0.08) {
+      if (speed < 0.08) {
         ball.vx = 0;
         ball.vy = 0;
+        if (ball.stoppedTime === null) {
+          ball.stoppedTime = Date.now();
+        }
       } else {
         anyRolling = true;
+        ball.stoppedTime = null; // Reset stop timer
+        ball.isResetting = false; // Reset reset state
+        
+        // Compute 3D rotation from rolling
+        const angle = speed / ball.radius;
+        const ax = -dy / speed;
+        const ay = dx / speed;
+        const az = 0;
+        
+        ball.rx = rotateVector(ball.rx, ax, ay, az, angle);
+        ball.ry = rotateVector(ball.ry, ax, ay, az, angle);
+        ball.rz = rotateVector(ball.rz, ax, ay, az, angle);
       }
       
       // Bounces
@@ -933,7 +1085,12 @@ class GameEngine {
           isCue: true,
           color: '#ffffff',
           scale: 1,
-          sinking: false
+          sinking: false,
+          rx: [1, 0, 0],
+          ry: [0, 1, 0],
+          rz: [0, 0, 1],
+          stoppedTime: Date.now(),
+          isResetting: false
         });
         
         const notice = document.getElementById('pocket-notice');
@@ -1421,54 +1578,155 @@ class GameEngine {
       this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
       this.ctx.fill();
       
-      // Render Cue Ball
+      // Get the active breed of the active player to customize the cue ball style
+      const activeBreedKey = this.selectedCows[this.activePlayer - 1] || 'SLB';
+      
       if (ball.isCue) {
+        // Base Cue Ball Fill depending on active cow breed
+        let baseColor = '#ffffff';
+        if (activeBreedKey === 'Mishima') {
+          baseColor = '#1e293b'; // Slate-navy
+        } else if (activeBreedKey === 'Longhorn') {
+          baseColor = '#b45309'; // Warm ginger-brown
+        } else if (activeBreedKey === 'Zebu') {
+          baseColor = '#8c8275'; // Warm grey
+        }
+        
         this.ctx.beginPath();
         this.ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
-        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillStyle = baseColor;
         this.ctx.fill();
         
-        // Spot 1
-        this.ctx.beginPath();
-        this.ctx.arc(-5, -4, 4, 0, Math.PI * 2);
-        this.ctx.fillStyle = '#111111';
-        this.ctx.fill();
-        
-        // Spot 2
-        this.ctx.beginPath();
-        this.ctx.arc(5, 5, 5, 0, Math.PI * 2);
-        this.ctx.fillStyle = '#111111';
-        this.ctx.fill();
-        
-        // Spot 3
-        this.ctx.beginPath();
-        this.ctx.arc(6, -6, 2.5, 0, Math.PI * 2);
-        this.ctx.fillStyle = '#111111';
-        this.ctx.fill();
+        // Render cow spots / star / stripes dynamically projected in 3D!
+        if (activeBreedKey === 'SLB' || activeBreedKey === 'Longhorn') {
+          // Spotted cows (SLB = black spots, Longhorn = cream fuzzy spots)
+          const spotsColor = activeBreedKey === 'SLB' ? '#111111' : '#fef3c7';
+          
+          const spots = [
+            { x: -0.35, y: -0.35, z: 0.85, r: 4.5 },
+            { x: 0.35,  y: 0.35,  z: 0.85, r: 5.5 },
+            { x: 0.5,   y: -0.4,  z: 0.7,  r: 3 },
+            { x: -0.5,  y: 0.5,   z: -0.7, r: 4.8 },
+            { x: 0.1,   y: -0.65, z: -0.7, r: 3.8 },
+            { x: 0.55,  y: 0.55,  z: -0.6, r: 4.2 }
+          ];
+          
+          spots.forEach(spot => {
+            // Project spot into world 3D coordinates based on ball orientation axes
+            const wx = spot.x * ball.rx[0] + spot.y * ball.ry[0] + spot.z * ball.rz[0];
+            const wy = spot.x * ball.rx[1] + spot.y * ball.ry[1] + spot.z * ball.rz[1];
+            const wz = spot.x * ball.rx[2] + spot.y * ball.ry[2] + spot.z * ball.rz[2];
+            
+            if (wz > 0.05) {
+              const spotX = wx * ball.radius;
+              const spotY = wy * ball.radius;
+              this.ctx.save();
+              this.ctx.beginPath();
+              const angle = Math.atan2(wy, wx);
+              // Major radius is spot.r, minor radius is spot.r * wz (foreshorted at edge)
+              this.ctx.ellipse(spotX, spotY, spot.r * wz, spot.r, angle, 0, Math.PI * 2);
+              this.ctx.fillStyle = spotsColor;
+              this.ctx.fill();
+              this.ctx.restore();
+            }
+          });
+        } else if (activeBreedKey === 'Mishima') {
+          // Elegant Japanese Mishima: 3D projected golden star on Plate A and Plate B
+          // Plate A (Front)
+          if (ball.rz[2] > 0.05) {
+            this.ctx.save();
+            this.ctx.transform(ball.rx[0], ball.rx[1], ball.ry[0], ball.ry[1], ball.rz[0] * ball.radius, ball.rz[1] * ball.radius);
+            drawStar(this.ctx, 0, 0, 5, 6, 2.5, '#f5c453');
+            this.ctx.restore();
+          }
+          // Plate B (Back)
+          if (-ball.rz[2] > 0.05) {
+            this.ctx.save();
+            this.ctx.transform(-ball.rx[0], -ball.rx[1], -ball.ry[0], -ball.ry[1], -ball.rz[0] * ball.radius, -ball.rz[1] * ball.radius);
+            drawStar(this.ctx, 0, 0, 5, 6, 2.5, '#f5c453');
+            this.ctx.restore();
+          }
+        } else if (activeBreedKey === 'Zebu') {
+          // Zebu Champion: Silver-white concentric stripes on Plate A and Plate B
+          const drawStripes = (ctx) => {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 1.6;
+            ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, Math.PI * 2); ctx.fill();
+          };
+          // Plate A (Front)
+          if (ball.rz[2] > 0.05) {
+            this.ctx.save();
+            this.ctx.transform(ball.rx[0], ball.rx[1], ball.ry[0], ball.ry[1], ball.rz[0] * ball.radius, ball.rz[1] * ball.radius);
+            drawStripes(this.ctx);
+            this.ctx.restore();
+          }
+          // Plate B (Back)
+          if (-ball.rz[2] > 0.05) {
+            this.ctx.save();
+            this.ctx.transform(-ball.rx[0], -ball.rx[1], -ball.ry[0], -ball.ry[1], -ball.rz[0] * ball.radius, -ball.rz[1] * ball.radius);
+            drawStripes(this.ctx);
+            this.ctx.restore();
+          }
+        }
       } else {
+        // Draw standard target billiard ball base colored sphere
         this.ctx.beginPath();
         this.ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
         this.ctx.fillStyle = ball.color;
         this.ctx.fill();
         
-        const radGlow = this.ctx.createRadialGradient(-4, -4, 1, 0, 0, ball.radius);
-        radGlow.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
-        radGlow.addColorStop(0.3, 'rgba(255, 255, 255, 0)');
-        radGlow.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
-        this.ctx.fillStyle = radGlow;
-        this.ctx.fill();
+        // Draw number plate on Plate A (centered at rz)
+        if (ball.rz[2] > 0.05) {
+          this.ctx.save();
+          this.ctx.transform(ball.rx[0], ball.rx[1], ball.ry[0], ball.ry[1], ball.rz[0] * ball.radius, ball.rz[1] * ball.radius);
+          
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, 6, 0, Math.PI * 2);
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.fill();
+          
+          this.ctx.font = 'bold 8px Inter';
+          this.ctx.fillStyle = '#000000';
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText(ball.id, 0, 0.5);
+          
+          this.ctx.restore();
+        }
         
-        this.ctx.beginPath();
-        this.ctx.arc(0, 0, 6, 0, Math.PI * 2);
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.fill();
-        
-        this.ctx.font = 'bold 8px Inter';
-        this.ctx.fillStyle = '#000000';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillText(ball.id, 0, 0.5);
+        // Draw number plate on Plate B (centered at -rz)
+        if (-ball.rz[2] > 0.05) {
+          this.ctx.save();
+          this.ctx.transform(-ball.rx[0], -ball.rx[1], -ball.ry[0], -ball.ry[1], -ball.rz[0] * ball.radius, -ball.rz[1] * ball.radius);
+          
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, 6, 0, Math.PI * 2);
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.fill();
+          
+          this.ctx.font = 'bold 8px Inter';
+          this.ctx.fillStyle = '#000000';
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText(ball.id, 0, 0.5);
+          
+          this.ctx.restore();
+        }
       }
+      
+      // 3D static shadow/glow highlight overlay (shades BOTH cue balls and target balls beautifully!)
+      const radGlow = this.ctx.createRadialGradient(-4, -4, 1, 0, 0, ball.radius);
+      radGlow.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
+      radGlow.addColorStop(0.35, 'rgba(255, 255, 255, 0)');
+      radGlow.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
+      this.ctx.fillStyle = radGlow;
+      
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
+      this.ctx.fill();
       
       this.ctx.restore();
     });
