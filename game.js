@@ -825,14 +825,12 @@ class GameEngine {
       ];
       
       // Auto-detect and set local device player identity upon deserializing
-      if (!this.myPlayerNumber) {
-        if (activePlayer === 2 && this.selectedCows[1] === null) {
-          this.myPlayerNumber = 2; // Joining as Player 2
-        } else if (activePlayer === 1) {
-          this.myPlayerNumber = 1; // Resuming as Player 1
-        } else {
-          this.myPlayerNumber = activePlayer; // Fallback guess
-        }
+      if (activePlayer === 2 && this.selectedCows[1] === null) {
+        this.myPlayerNumber = 2; // Joining as Player 2
+      } else if (activePlayer === 1) {
+        this.myPlayerNumber = 1; // Resuming as Player 1
+      } else {
+        this.myPlayerNumber = activePlayer; // Fallback guess
       }
       
       const cueX = fromBase36(cueStr.substring(0, 2));
@@ -926,14 +924,12 @@ class GameEngine {
       this.selectedCows = state.c || ['SLB', null];
       
       // Auto-detect and set local device player identity upon deserializing
-      if (!this.myPlayerNumber) {
-        if (state.a === 2 && (!state.c || state.c[1] === null)) {
-          this.myPlayerNumber = 2; // Joining as Player 2
-        } else if (state.a === 1) {
-          this.myPlayerNumber = 1; // Resuming as Player 1
-        } else {
-          this.myPlayerNumber = state.a; // Fallback guess
-        }
+      if (state.a === 2 && (!state.c || state.c[1] === null)) {
+        this.myPlayerNumber = 2; // Joining as Player 2
+      } else if (state.a === 1) {
+        this.myPlayerNumber = 1; // Resuming as Player 1
+      } else {
+        this.myPlayerNumber = state.a; // Fallback guess
       }
       
       // Load cue ball
@@ -2172,6 +2168,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Close modals
   document.querySelectorAll('.modal-close-btn, .modal-close-action').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (modalShare.classList.contains('active')) {
+        // Revert turn advancement if closing the share modal (e.g. they want to shoot again)
+        game.turnCount--;
+        game.activePlayer = game.activePlayer === 1 ? 2 : 1;
+        game.updateHudUI();
+        game.updateControlsUI();
+      }
+      
       modalShare.classList.remove('active');
       modalScan.classList.remove('active');
       stopCameraScanner();
