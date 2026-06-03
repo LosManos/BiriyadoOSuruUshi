@@ -733,27 +733,188 @@ class GameEngine {
   // --- CORE GAME STATE EXPORT/IMPORT (URL-FRIENDLY BASE64 JSON) ---
   
   serializeState() {
-    const state = {
-      t: this.turnCount,
-      a: this.activePlayer,
-      c: this.selectedCows,
-      // Normalize cue ball position
-      cue: {
-        x: Math.round(this.balls.find(b => b.isCue)?.x || 250),
-        y: Math.round(this.balls.find(b => b.isCue)?.y || 750)
-      },
-      // Compact active target balls
-      b: this.balls.filter(b => !b.isCue).map(b => ({
-        i: b.id,
-        x: Math.round(b.x),
-        y: Math.round(b.y),
-        c: b.color
-      }))
+    const BREED_CHAR_MAP = {
+      'SLB': 'S',
+      'Mishima': 'M',
+      'Longhorn': 'L',
+      'Zebu': 'Z'
     };
-    return JSON.stringify(state);
+    
+    const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+    const toBase36 = (val) => clamp(Math.round(val), 0, 1295).toString(36).padStart(2, '0');
+    
+    const turnStr = this.turnCount.toString(36);
+    const activePlayerStr = this.activePlayer.toString();
+    
+    const cow1 = BREED_CHAR_MAP[this.selectedCows[0]] || '_';
+    const cow2 = BREED_CHAR_MAP[this.selectedCows[1]] || '_';
+    const cowsStr = cow1 + cow2;
+    
+    const cueBall = this.balls.find(b => b.isCue);
+    const cueX = cueBall ? cueBall.x : 250;
+    const cueY = cueBall ? cueBall.y : 750;
+    const cueStr = toBase36(cueX) + toBase36(cueY);
+    
+    const targetBallsStr = this.balls
+      .filter(b => !b.isCue)
+      .map(b => b.id.toString() + toBase36(b.x) + toBase36(b.y))
+      .join('');
+      
+    return `${turnStr}.${activePlayerStr}.${cowsStr}.${cueStr}.${targetBallsStr}`;
   }
 
-  deserializeState(jsonString) {
+  decodeStateParam(param) {
+    if (!param) return null;
+    
+    // If the param contains a dot, it is already a raw compact string.
+    if (param.includes('.')) {
+      return param;
+    }
+    
+    // 1. Try decoding as Base64 first (for old JSON sharing links)
+    try {
+      const decoded = decodeURIComponent(escape(atob(param)));
+      if (decoded.trim().startsWith('{') || decoded.includes('.')) {
+        return decoded;
+      }
+    } catch (e) {
+      // Ignore decoding errors and fallback to raw param
+    }
+    // 2. Otherwise treat it as the raw compact state parameter
+    return param;
+  }
+
+  deserializeState(stateString) {
+    if (!stateString) return false;
+    const cleaned = stateString.trim();
+    
+    if (cleaned.startsWith('{')) {
+      return this.deserializeJsonState(cleaned);
+    }
+    
+    // Parse custom compact format: turn.activePlayer.cows.cue.balls
+    const parts = cleaned.split('.');
+    if (parts.length < 5) {
+      return false;
+    }
+    
+    try {
+      const CHAR_BREED_MAP = {
+        'S': 'SLB',
+        'M': 'Mishima',
+        'L': 'Longhorn',
+        'Z': 'Zebu'
+      };
+      const fromBase36 = (str) => parseInt(str, 36);
+      
+      const turnCount = fromBase36(parts[0]);
+      const activePlayer = parseInt(parts[1], 10);
+      const cowsStr = parts[2];
+      const cueStr = parts[3];
+      const ballsStr = parts[4];
+      
+      if (isNaN(turnCount) || isNaN(activePlayer) || cowsStr.length !== 2 || cueStr.length !== 4) {
+        return false;
+      }
+      
+      this.turnCount = turnCount;
+      this.activePlayer = activePlayer;
+      this.selectedCows = [
+        CHAR_BREED_MAP[cowsStr[0]] || null,
+        CHAR_BREED_MAP[cowsStr[1]] || null
+      ];
+      
+      // Auto-detect and set local device player identity upon deserializing
+      if (!this.myPlayerNumber) {
+        if (activePlayer === 2 && this.selectedCows[1] === null) {
+          this.myPlayerNumber = 2; // Joining as Player 2
+        } else if (activePlayer === 1) {
+          this.myPlayerNumber = 1; // Resuming as Player 1
+        } else {
+          this.myPlayerNumber = activePlayer; // Fallback guess
+        }
+      }
+      
+      const cueX = fromBase36(cueStr.substring(0, 2));
+      const cueY = fromBase36(cueStr.substring(2, 4));
+      
+      // Load cue ball
+      this.balls = [{
+        id: 0,
+        x: cueX,
+        y: cueY,
+        vx: 0,
+        vy: 0,
+        radius: this.ballRadius,
+        isCue: true,
+        color: '#ffffff',
+        scale: 1,
+        sinking: false,
+        rx: [1, 0, 0],
+        ry: [0, 1, 0],
+        rz: [0, 0, 1],
+        stoppedTime: Date.now(),
+        isResetting: false
+      }];
+      
+      const ballColors = {
+        1: '#f5c453',
+        2: '#3b82f6',
+        3: '#ef4444',
+        4: '#a855f7',
+        5: '#f97316',
+        6: '#10b981'
+      };
+      
+      // Load target balls
+      const activeIds = [];
+      for (let i = 0; i < ballsStr.length; i += 5) {
+        if (i + 5 > ballsStr.length) break;
+        const id = parseInt(ballsStr[i], 10);
+        const x = fromBase36(ballsStr.substring(i + 1, i + 3));
+        const y = fromBase36(ballsStr.substring(i + 3, i + 5));
+        
+        if (isNaN(id) || isNaN(x) || isNaN(y)) {
+          return false;
+        }
+        
+        activeIds.push(id);
+        this.balls.push({
+          id,
+          x,
+          y,
+          vx: 0,
+          vy: 0,
+          radius: this.ballRadius,
+          color: ballColors[id] || '#f5c453',
+          scale: 1,
+          sinking: false,
+          rx: [1, 0, 0],
+          ry: [0, 1, 0],
+          rz: [0, 0, 1],
+          stoppedTime: Date.now(),
+          isResetting: false
+        });
+      }
+      
+      // Derive which balls are sunk
+      const allIds = [1, 2, 3, 4, 5, 6];
+      this.sunkBalls = allIds.filter(id => !activeIds.includes(id));
+      
+      this.isRolling = false;
+      this.isDragging = false;
+      this.scratchOccurred = false;
+      
+      this.updateHudUI();
+      this.updateControlsUI();
+      return true;
+    } catch (e) {
+      console.error("Failed to parse compact game state:", e);
+      return false;
+    }
+  }
+
+  deserializeJsonState(jsonString) {
     try {
       const state = JSON.parse(jsonString);
       if (!state.t || !state.a || !state.cue || !Array.isArray(state.b)) {
@@ -794,6 +955,15 @@ class GameEngine {
         isResetting: false
       }];
       
+      const ballColors = {
+        1: '#f5c453',
+        2: '#3b82f6',
+        3: '#ef4444',
+        4: '#a855f7',
+        5: '#f97316',
+        6: '#10b981'
+      };
+
       // Load target balls
       state.b.forEach(b => {
         this.balls.push({
@@ -803,7 +973,7 @@ class GameEngine {
           vx: 0,
           vy: 0,
           radius: this.ballRadius,
-          color: b.c || '#f5c453',
+          color: b.c || ballColors[b.i] || '#f5c453',
           scale: 1,
           sinking: false,
           rx: [1, 0, 0],
@@ -1967,15 +2137,14 @@ document.addEventListener('DOMContentLoaded', () => {
     game.updateHudUI();
     game.checkInGameSelector();
     
-    // 2. Compel state into JSON and compress to URL-safe Base64
+    // 2. Compel state into custom compact representation
     const compactState = game.serializeState();
-    const base64State = btoa(unescape(encodeURIComponent(compactState)));
     
     // 3. Construct direct URL link query parameter using the resolved server IP
     const protocol = window.location.protocol; // https:
     const portSuffix = game.serverPort ? `:${game.serverPort}` : "";
     const baseUri = `${protocol}//${game.serverIp}${portSuffix}${window.location.pathname}`;
-    const shareUrl = `${baseUri}?s=${base64State}`;
+    const shareUrl = `${baseUri}?s=${compactState}`;
     
     // 4. Generate QR code pointing directly to the link!
     qrTarget.innerHTML = "";
@@ -1985,7 +2154,7 @@ document.addEventListener('DOMContentLoaded', () => {
       height: 188,
       colorDark: "#000000",
       colorLight: "#ffffff",
-      correctLevel: QRCode.CorrectLevel.M
+      correctLevel: QRCode.CorrectLevel.L
     });
     
     // Fill text summaries
@@ -2080,8 +2249,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const base64State = urlObj.searchParams.get('s');
           
           if (base64State) {
-            const decodedJson = decodeURIComponent(escape(atob(base64State)));
-            const success = game.deserializeState(decodedJson);
+            const decodedState = game.decodeStateParam(base64State);
+            const success = game.deserializeState(decodedState);
             
             if (success) {
               scanFeedback.textContent = "Success! Turn synchronized! 🥛🎉";
@@ -2172,8 +2341,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (stateParam) {
       try {
-        const decodedJson = decodeURIComponent(escape(atob(stateParam)));
-        const success = game.deserializeState(decodedJson);
+        const decodedState = game.decodeStateParam(stateParam);
+        const success = game.deserializeState(decodedState);
         
         if (success) {
           console.log("🔗 Game state parsed securely from URL link query.");

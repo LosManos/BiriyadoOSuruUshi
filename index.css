@@ -960,6 +960,9 @@ body::before {
   width: 100% !important;
   height: 100% !important;
   display: block;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
 }
 
 .state-summary-card {
