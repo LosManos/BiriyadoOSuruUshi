@@ -1620,23 +1620,190 @@ class GameEngine {
     
     this.ctx.restore(); // BACK to unscaled normal screen pixel coordinates!
 
-    // 5. Draw muddy watering hole pockets (Centered at screen positions, drawn as perfect round circles!)
-    this.pockets.forEach(pocket => {
+    // 5. Draw stylized top-down farm sheds in radial/billboard perspective (matching the fence)
+    this.pockets.forEach((pocket, idx) => {
       const screenX = pocket.x * scaleX;
       const screenY = pocket.y * scaleY;
       const screenR = pocket.r * scaleX; // Uniform pocket radius matching ball scale
-      
-      // Mud border
+
+      const dx = pocket.x - 250;
+      const dy = pocket.y - 500;
+      const dist = Math.hypot(dx, dy) || 1;
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const theta = Math.atan2(ux, -uy);
+
+      this.ctx.save();
+      this.ctx.translate(screenX, screenY);
+      this.ctx.rotate(theta);
+
+      const shedW = screenR * 2.2;
+      const shedH_wall = screenR * 0.7; // height of walls
+      const shedH_roof = screenR * 0.6; // height of roof slope
+
+      const groundY = -screenR * 0.4; // bottom wall starts slightly behind pocket center
+      const eavesY = groundY - shedH_wall; // top of walls
+      const ridgeY = eavesY - shedH_roof; // top of roof
+
+      // 1. Soft drop shadow on the grass (drawn in local coordinates)
+      this.ctx.fillStyle = 'rgba(12, 25, 12, 0.45)';
       this.ctx.beginPath();
-      this.ctx.arc(screenX, screenY, screenR + 2, 0, Math.PI * 2);
-      this.ctx.fillStyle = '#2d1a0f';
+      // Shadow rectangle covering the walls and roof region, offset slightly in local +X and +Y
+      this.ctx.fillRect(-shedW / 2 + 5, ridgeY + 5, shedW, (groundY - ridgeY));
       this.ctx.fill();
+
+      // 2. Inner hole void (drawn on the ground, centered at (0, 0))
+      // By drawing the hole before the walls and roof, the wall headers/lintels will occlude the top part of the hole, creating a stunning 3D depth effect!
       
-      // Inner watering hole
+      // Slate stone rim
       this.ctx.beginPath();
-      this.ctx.arc(screenX, screenY, screenR, 0, Math.PI * 2);
-      this.ctx.fillStyle = '#080808';
+      this.ctx.arc(0, 0, screenR + 3, 0, Math.PI * 2);
+      this.ctx.fillStyle = '#78716c'; // slate stone gray
       this.ctx.fill();
+      this.ctx.strokeStyle = '#292524';
+      this.ctx.lineWidth = 1.5;
+      this.ctx.stroke();
+
+      // Deep dark well void
+      const holeGrad = this.ctx.createRadialGradient(-screenR * 0.2, -screenR * 0.2, screenR * 0.1, 0, 0, screenR);
+      holeGrad.addColorStop(0, '#000000');
+      holeGrad.addColorStop(0.85, '#0b0c10');
+      holeGrad.addColorStop(1, '#1e1c18'); // warm soil color at bottom rim
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, screenR, 0, Math.PI * 2);
+      this.ctx.fillStyle = holeGrad;
+      this.ctx.fill();
+
+      // Bottom inner rim highlight (light catching the front edge of the opening)
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, screenR, 0, Math.PI);
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      this.ctx.lineWidth = 1.2;
+      this.ctx.stroke();
+
+      // 3. Wooden Shed front wall (built with an open doorway in the center)
+      this.ctx.fillStyle = '#653b1b'; // warm rustic wood brown
+      this.ctx.strokeStyle = '#38200d'; // dark outline
+      this.ctx.lineWidth = 1.8;
+
+      const doorW = screenR * 1.1; // wide enough for balls to roll into
+      const doorTopY = groundY - screenR * 0.5; // doorway height
+
+      // Left Pillar of front wall
+      this.ctx.beginPath();
+      this.ctx.rect(-shedW / 2, groundY, (shedW - doorW) / 2, -shedH_wall);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // Right Pillar of front wall
+      this.ctx.beginPath();
+      this.ctx.rect(doorW / 2, groundY, (shedW - doorW) / 2, -shedH_wall);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // Top Header Beam (connecting the pillars above the doorway)
+      this.ctx.beginPath();
+      this.ctx.rect(-shedW / 2, doorTopY, shedW, eavesY - doorTopY);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // Draw wood plank siding lines (vertical on pillars)
+      this.ctx.strokeStyle = 'rgba(56, 32, 13, 0.35)';
+      this.ctx.lineWidth = 1;
+      // Left pillar siding
+      for (let px = -shedW / 2 + 4; px < -doorW / 2; px += 6) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(px, groundY);
+        this.ctx.lineTo(px, eavesY);
+        this.ctx.stroke();
+      }
+      // Right pillar siding
+      for (let px = doorW / 2 + 4; px < shedW / 2; px += 6) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(px, groundY);
+        this.ctx.lineTo(px, eavesY);
+        this.ctx.stroke();
+      }
+      // Header beam siding (horizontal)
+      for (let py = doorTopY - 3; py > eavesY; py -= 5) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(-shedW / 2, py);
+        this.ctx.lineTo(shedW / 2, py);
+        this.ctx.stroke();
+      }
+
+      // 4. Roof Front Slope (Gable style, sloping up/backwards from eavesY to ridgeY)
+      const roofW = shedW + 6; // slightly wider than the walls for overhang
+      
+      const roofGrad = this.ctx.createLinearGradient(0, eavesY, 0, ridgeY);
+      roofGrad.addColorStop(0, '#801414'); // dark red eaves
+      roofGrad.addColorStop(0.5, '#b91c1c'); // medium red
+      roofGrad.addColorStop(1, '#dc2626'); // bright red ridge (facing light)
+      
+      this.ctx.fillStyle = roofGrad;
+      this.ctx.beginPath();
+      this.ctx.rect(-roofW / 2, eavesY, roofW, ridgeY - eavesY);
+      this.ctx.fill();
+
+      // Draw corrugated metal roof lines (running vertically, from eaves to ridge)
+      this.ctx.lineWidth = 1;
+      for (let px = -roofW / 2 + 3; px < roofW / 2; px += 6) {
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(px, eavesY);
+        this.ctx.lineTo(px, ridgeY);
+        this.ctx.stroke();
+
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(px + 1, eavesY);
+        this.ctx.lineTo(px + 1, ridgeY);
+        this.ctx.stroke();
+      }
+
+      // Ridge Cap (along the peak at ridgeY)
+      this.ctx.strokeStyle = '#b91c1c';
+      this.ctx.lineWidth = 3.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(-roofW / 2, ridgeY);
+      this.ctx.lineTo(roofW / 2, ridgeY);
+      this.ctx.stroke();
+
+      // White/cream trim boards (bargeboards) at the left and right gable edges
+      this.ctx.strokeStyle = '#eae7dd';
+      this.ctx.lineWidth = 2.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(-roofW / 2, eavesY);
+      this.ctx.lineTo(-roofW / 2, ridgeY);
+      this.ctx.moveTo(roofW / 2, eavesY);
+      this.ctx.lineTo(roofW / 2, ridgeY);
+      this.ctx.stroke();
+
+      // Trim border shadows
+      this.ctx.strokeStyle = '#3a3833';
+      this.ctx.lineWidth = 1;
+      this.ctx.strokeRect(-roofW / 2, eavesY, roofW, ridgeY - eavesY);
+
+      // 5. Tiny Brick Chimney standing up from the right roof panel
+      const chX = screenR * 0.7;
+      const chBaseY = eavesY - screenR * 0.25; // on the roof
+      const chHeight = screenR * 0.3;
+      const chTopY = chBaseY - chHeight;
+
+      // Chimney shadow
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      this.ctx.fillRect(chX - 2, chTopY + 2, 6, chHeight);
+      // Red brick chimney body
+      this.ctx.fillStyle = '#991b1b';
+      this.ctx.fillRect(chX - 3, chTopY, 6, chHeight);
+      this.ctx.strokeStyle = '#7f1d1d';
+      this.ctx.lineWidth = 0.8;
+      this.ctx.strokeRect(chX - 3, chTopY, 6, chHeight);
+      // Dark slate cap
+      this.ctx.fillStyle = '#1e293b';
+      this.ctx.fillRect(chX - 4, chTopY - 2, 8, 2);
+
+      this.ctx.restore();
     });
 
     // 6. Draw cue guide lines (Aiming system)
