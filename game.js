@@ -516,40 +516,40 @@ class GameEngine {
     this.borderGrassTufts = [];
     const types = ['buttercup', 'daisy', 'clover'];
     
-    // Generate 32 random wildflowers and clovers
-    for (let i = 0; i < 32; i++) {
+    // Generate 48 random wildflowers and clovers (denser)
+    for (let i = 0; i < 48; i++) {
       this.flowers.push({
         x: 45 + Math.random() * (this.virtualWidth - 90),
         y: 45 + Math.random() * (this.virtualHeight - 90),
         type: types[Math.floor(Math.random() * types.length)],
-        size: 3.5 + Math.random() * 3
+        size: 1.8 + Math.random() * 1.5
       });
     }
 
-    // Generate 75 organic grass tuft positions
-    for (let i = 0; i < 75; i++) {
+    // Generate 120 organic grass tuft positions (denser, zoomed out)
+    for (let i = 0; i < 120; i++) {
       this.grassTufts.push({
         x: 45 + Math.random() * (this.virtualWidth - 90),
         y: 45 + Math.random() * (this.virtualHeight - 90),
-        length: 5 + Math.random() * 6
+        length: 3.0 + Math.random() * 3
       });
     }
 
-    // Generate 45 border grass tufts that hug the fence rails and peek over them
-    for (let i = 0; i < 45; i++) {
+    // Generate 60 border grass tufts that hug the picket fence bases and peek over them
+    for (let i = 0; i < 60; i++) {
       const side = Math.floor(Math.random() * 4);
-      let x, y, len = 6 + Math.random() * 6;
-      if (side === 0) { // Top rail (y near 25)
+      let x, y, len = 3.5 + Math.random() * 3;
+      if (side === 0) { // Top rail (y near 14)
         x = 40 + Math.random() * (this.virtualWidth - 80);
-        y = 22 + Math.random() * 8;
-      } else if (side === 1) { // Bottom rail (y near 975)
+        y = 10 + Math.random() * 8;
+      } else if (side === 1) { // Bottom rail (y near 986)
         x = 40 + Math.random() * (this.virtualWidth - 80);
-        y = 970 + Math.random() * 8;
-      } else if (side === 2) { // Left rail (x near 25)
-        x = 22 + Math.random() * 8;
+        y = 980 + Math.random() * 8;
+      } else if (side === 2) { // Left rail (x near 14)
+        x = 10 + Math.random() * 8;
         y = 40 + Math.random() * (this.virtualHeight - 80);
-      } else { // Right rail (x near 475)
-        x = 470 + Math.random() * 8;
+      } else { // Right rail (x near 486)
+        x = 480 + Math.random() * 8;
         y = 40 + Math.random() * (this.virtualHeight - 80);
       }
       this.borderGrassTufts.push({ x, y, length: len });
@@ -566,44 +566,35 @@ class GameEngine {
     grassCanvas.height = this.virtualHeight;
     const ctx = grassCanvas.getContext('2d');
 
-    // 1. Base pasture green
-    ctx.fillStyle = '#1c4422'; // Lush base green
+    // 1. Base pasture green (Lush wild green)
+    ctx.fillStyle = '#183c1e';
     ctx.fillRect(0, 0, this.virtualWidth, this.virtualHeight);
 
-    // 2. Mower Lawn stripes (alternating light/dark green bands for a premium turf look)
-    const numStripes = 10;
-    const stripeWidth = this.virtualWidth / numStripes;
-    for (let i = 0; i < numStripes; i++) {
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(34, 197, 94, 0.04)' : 'rgba(10, 35, 10, 0.04)';
-      ctx.fillRect(i * stripeWidth, 0, stripeWidth, this.virtualHeight);
-    }
-
-    // 3. Sunlight radial glow
+    // 2. Sunlight radial glow (simulating tree shade and sunlight filters)
     const radialGrad = ctx.createRadialGradient(
       this.virtualWidth / 2, this.virtualHeight / 2, 80,
       this.virtualWidth / 2, this.virtualHeight / 2, 800
     );
-    radialGrad.addColorStop(0, 'rgba(45, 109, 61, 0.45)');  // center bright grass highlight
-    radialGrad.addColorStop(1, 'rgba(15, 38, 16, 0.45)');   // outer deep border green
+    radialGrad.addColorStop(0, 'rgba(40, 100, 52, 0.45)');  // center bright grass highlight
+    radialGrad.addColorStop(1, 'rgba(12, 30, 14, 0.45)');   // outer deep border green
     ctx.fillStyle = radialGrad;
     ctx.fillRect(0, 0, this.virtualWidth, this.virtualHeight);
 
-    // 4. Generate thousands of tiny, highly detailed grass blades
-    // Draw 5000 tiny blades of grass to make a truly dense sod/felt!
-    ctx.lineWidth = 1.0;
-    for (let i = 0; i < 5000; i++) {
+    // 3. Generate 9000 tiny, highly detailed grass blades for a truly dense, zoomed-out field look
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < 9000; i++) {
       const gx = Math.random() * this.virtualWidth;
       const gy = Math.random() * this.virtualHeight;
-      const len = 3 + Math.random() * 5;
-      const angle = (Math.random() - 0.5) * 0.4; // slight tilt
+      const len = 2.0 + Math.random() * 2.5;
+      const angle = (Math.random() - 0.5) * 0.3; // slight tilt
 
       // Pick organic grass green variants
       const greens = [
-        'rgba(34, 95, 42, 0.7)',   // Forest green
-        'rgba(27, 86, 36, 0.65)',  // Deep green
-        'rgba(45, 137, 59, 0.55)',  // Medium emerald
-        'rgba(30, 72, 38, 0.75)',   // Olive grass
-        'rgba(74, 166, 88, 0.35)'   // Sunny lime highlight
+        'rgba(22, 66, 30, 0.75)',   // Forest green
+        'rgba(18, 56, 24, 0.7)',    // Deep green
+        'rgba(32, 102, 44, 0.6)',   // Medium emerald
+        'rgba(20, 52, 26, 0.8)',    // Olive grass
+        'rgba(46, 128, 58, 0.45)'   // Sunny lime highlight
       ];
       ctx.strokeStyle = greens[Math.floor(Math.random() * greens.length)];
 
@@ -616,11 +607,11 @@ class GameEngine {
       ctx.stroke();
     }
 
-    // 5. Draw tiny clover patches in the turf
-    for (let i = 0; i < 40; i++) {
+    // 4. Draw tiny clover patches in the turf
+    for (let i = 0; i < 60; i++) {
       const cx = Math.random() * this.virtualWidth;
       const cy = Math.random() * this.virtualHeight;
-      const s = 1.5 + Math.random() * 1.5;
+      const s = 1.0 + Math.random() * 1.0;
       ctx.fillStyle = 'rgba(21, 128, 61, 0.45)'; // Subtle green clover color
 
       // Tiny 3-leaf shape
@@ -629,12 +620,12 @@ class GameEngine {
       ctx.beginPath(); ctx.arc(cx, cy + s*0.3, s, 0, Math.PI*2); ctx.fill();
     }
 
-    // 6. Draw subtle soil/dirt spots for organic depth
-    for (let i = 0; i < 15; i++) {
+    // 5. Draw subtle soil/dirt spots for organic depth
+    for (let i = 0; i < 25; i++) {
       const dx = Math.random() * this.virtualWidth;
       const dy = Math.random() * this.virtualHeight;
-      const dr = 1 + Math.random() * 2;
-      ctx.fillStyle = 'rgba(45, 26, 15, 0.15)'; // faint mud dirt
+      const dr = 1 + Math.random() * 1.5;
+      ctx.fillStyle = 'rgba(60, 40, 25, 0.08)'; // very faint mud dirt
       ctx.beginPath();
       ctx.arc(dx, dy, dr, 0, Math.PI*2);
       ctx.fill();
@@ -1395,7 +1386,88 @@ class GameEngine {
       }
     });
 
-    // 4. Draw Cushions/Rails as rustic wooden double-rail corral fences with cross braces
+    // 4. Draw Cushions/Rails as rustic white picket fences in radial perspective
+    const drawPicket = (ctx, px, py, width, height) => {
+      const dx = px - 250;
+      const dy = py - 500;
+      const dist = Math.hypot(dx, dy) || 1;
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const theta = Math.atan2(ux, -uy);
+
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(theta);
+
+      // 1. Draw picket shadow extending slightly outwards (offset in local Y since local -Y points outwards)
+      ctx.fillStyle = 'rgba(10, 20, 10, 0.22)';
+      ctx.beginPath();
+      ctx.moveTo(-width/2 + 1.5, 1.5);
+      ctx.lineTo(-width/2 + 1.5, -height + width/2 + 1.5);
+      ctx.lineTo(0 + 1.5, -height + 1.5);
+      ctx.lineTo(width/2 + 1.5, -height + width/2 + 1.5);
+      ctx.lineTo(width/2 + 1.5, 1.5);
+      ctx.closePath();
+      ctx.fill();
+
+      // 2. Weathered white body
+      ctx.fillStyle = '#fcfaf2'; // off-white
+      ctx.beginPath();
+      ctx.moveTo(-width/2, 0);
+      ctx.lineTo(-width/2, -height + width/2);
+      ctx.lineTo(0, -height); // pointed tip
+      ctx.lineTo(width/2, -height + width/2);
+      ctx.lineTo(width/2, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // 3. Wood grain/peeling paint texture using deterministic hash
+      ctx.fillStyle = '#5c483a'; // brown wood underneath
+      const hash = Math.sin(px * 12.9898 + py * 78.233) * 43758.5453;
+      const chip1 = (hash * 10) % 1;
+      const chip2 = (hash * 100) % 1;
+      const chip3 = (hash * 1000) % 1;
+
+      if (chip1 > 0.45) {
+        // left edge chip
+        ctx.fillRect(-width/2, -height * 0.55, width * 0.3, height * 0.15);
+      }
+      if (chip2 > 0.55) {
+        // right edge chip
+        ctx.fillRect(width/2 - width * 0.25, -height * 0.35, width * 0.25, height * 0.2);
+      }
+      if (chip3 > 0.65) {
+        // center paint crack line
+        ctx.strokeStyle = '#5c483a';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(0, -height * 0.2);
+        ctx.lineTo(0, -height * 0.5);
+        ctx.stroke();
+      }
+
+      // 4. Picket outline
+      ctx.strokeStyle = '#434036';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(-width/2, 0);
+      ctx.lineTo(-width/2, -height + width/2);
+      ctx.lineTo(0, -height);
+      ctx.lineTo(width/2, -height + width/2);
+      ctx.lineTo(width/2, 0);
+      ctx.closePath();
+      ctx.stroke();
+
+      // 5. Nails (rusty spot)
+      ctx.fillStyle = '#7a5a43';
+      ctx.beginPath();
+      ctx.arc(0, -height * 0.2, 0.8, 0, Math.PI * 2);
+      ctx.arc(0, -height * 0.7, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    };
+
     const drawFenceWall = (ctx, rx, ry, rw, rh, isVert = false) => {
       ctx.save();
       ctx.translate(rx, ry);
@@ -1403,156 +1475,45 @@ class GameEngine {
       const halfW = rw / 2;
       const halfH = rh / 2;
 
-      // Outer rail is shifted outward, inner rail is shifted inward
-      const outOffset = -6;
-      const inOffset = 6;
+      // Draw two parallel backing rails (weathered white planks)
+      ctx.fillStyle = '#dfdbd0'; // weathered white rails
+      ctx.strokeStyle = '#3d3a33';
+      ctx.lineWidth = 1.0;
 
-      const outerY = isVert ? 0 : outOffset;
-      const outerX = isVert ? outOffset : 0;
-      const outerW = isVert ? 6 : rw;
-      const outerH = isVert ? rh : 6;
-
-      const innerY = isVert ? 0 : inOffset;
-      const innerX = isVert ? inOffset : 0;
-      const innerW = isVert ? 10 : rw;
-      const innerH = isVert ? rh : 10;
-
-      // Draw shadow for both rails
-      ctx.fillStyle = 'rgba(10, 20, 10, 0.4)';
       if (isVert) {
-        ctx.fillRect(outOffset - 3 + 2, -halfH + 2, 6, rh);
-        ctx.fillRect(inOffset - 5 + 2, -halfH + 2, 10, rh);
+        ctx.fillRect(-5, -halfH, 3, rh);
+        ctx.strokeRect(-5, -halfH, 3, rh);
+        ctx.fillRect(2, -halfH, 3, rh);
+        ctx.strokeRect(2, -halfH, 3, rh);
       } else {
-        ctx.fillRect(-halfW + 2, outOffset - 3 + 2, rw, 6);
-        ctx.fillRect(-halfW + 2, inOffset - 5 + 2, rw, 10);
+        ctx.fillRect(-halfW, -5, rw, 3);
+        ctx.strokeRect(-halfW, -5, rw, 3);
+        ctx.fillRect(-halfW, 2, rw, 3);
+        ctx.strokeRect(-halfW, 2, rw, 3);
       }
+      ctx.restore(); // Restore to untranslated world coordinates!
 
-      // Helper to draw a single log rail segment
-      const drawSingleRail = (x, y, w, h, thickness, colorGrad) => {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.fillStyle = colorGrad;
-        ctx.beginPath();
-        if (ctx.roundRect) {
-          ctx.roundRect(-w/2, -h/2, w, h, 3);
-        } else {
-          ctx.rect(-w/2, -h/2, w, h);
+      // Draw pickets in world coordinates
+      const picketSpacing = 16;
+      const picketWidth = 8;
+      const picketHeight = 18; // 18px height just as high as the fence today
+
+      if (isVert) {
+        const startY = ry - halfH + 8;
+        const endY = ry + halfH - 8;
+        for (let py = startY; py <= endY; py += picketSpacing) {
+          drawPicket(ctx, rx, py, picketWidth, picketHeight);
         }
-        ctx.fill();
-        ctx.strokeStyle = '#230f03';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
-        // Beautiful organic wood grain lines
-        ctx.strokeStyle = 'rgba(35, 15, 3, 0.35)';
-        ctx.lineWidth = 1.0;
-        ctx.beginPath();
-        if (isVert) {
-          ctx.moveTo(-w*0.15, -h/2 + 6); ctx.lineTo(-w*0.15, h/2 - 6);
-          ctx.moveTo(w*0.15, -h/2 + 8); ctx.lineTo(w*0.15, h/2 - 8);
-          // wood knot
-          ctx.arc(0, -h*0.15, 1.8, 0, Math.PI*2);
-        } else {
-          ctx.moveTo(-w/2 + 6, -h*0.15); ctx.lineTo(w/2 - 6, -h*0.15);
-          ctx.moveTo(-w/2 + 8, h*0.15); ctx.lineTo(w/2 - 8, h*0.15);
-          // wood knot
-          ctx.arc(-w*0.15, 0, 1.8, 0, Math.PI*2);
-        }
-        ctx.stroke();
-        ctx.restore();
-      };
-
-      // Oak log linear bark-to-core wood gradients
-      const barkGradOuter = ctx.createLinearGradient(
-        isVert ? outOffset - 3 : 0, isVert ? 0 : outOffset - 3,
-        isVert ? outOffset + 3 : 0, isVert ? 0 : outOffset + 3
-      );
-      barkGradOuter.addColorStop(0, '#3f1f0a');
-      barkGradOuter.addColorStop(0.5, '#6e3816');
-      barkGradOuter.addColorStop(1, '#3f1f0a');
-
-      const barkGradInner = ctx.createLinearGradient(
-        isVert ? inOffset - 5 : 0, isVert ? 0 : inOffset - 5,
-        isVert ? inOffset + 5 : 0, isVert ? 0 : inOffset + 5
-      );
-      barkGradInner.addColorStop(0, '#311707');
-      barkGradInner.addColorStop(0.2, '#50280f');
-      barkGradInner.addColorStop(0.5, '#7b401b'); // oak inner heartwood
-      barkGradInner.addColorStop(0.8, '#50280f');
-      barkGradInner.addColorStop(1, '#311707');
-
-      // Draw rustic vertical connector slats bridging the rails
-      ctx.fillStyle = '#4c260d';
-      ctx.strokeStyle = '#230f03';
-      ctx.lineWidth = 1.2;
-      const slatSpacing = 35;
-      const startPos = -halfW + 15;
-      const endPos = halfW - 15;
-
-      for (let pos = startPos; pos <= endPos; pos += slatSpacing) {
-        ctx.save();
-        if (isVert) {
-          ctx.translate(0, pos);
-          ctx.fillRect(outOffset, -3, inOffset - outOffset, 6);
-          ctx.strokeRect(outOffset, -3, inOffset - outOffset, 6);
-          // Silver nails
-          ctx.fillStyle = '#9e9e9e';
-          ctx.beginPath();
-          ctx.arc(outOffset + 1.5, 0, 0.8, 0, Math.PI*2);
-          ctx.arc(inOffset - 1.5, 0, 0.8, 0, Math.PI*2);
-          ctx.fill();
-        } else {
-          ctx.translate(pos, 0);
-          ctx.fillRect(-3, outOffset, 6, inOffset - outOffset);
-          ctx.strokeRect(-3, outOffset, 6, inOffset - outOffset);
-          // Silver nails
-          ctx.fillStyle = '#9e9e9e';
-          ctx.beginPath();
-          ctx.arc(0, outOffset + 1.5, 0.8, 0, Math.PI*2);
-          ctx.arc(0, inOffset - 1.5, 0.8, 0, Math.PI*2);
-          ctx.fill();
-        }
-        ctx.restore();
-      }
-
-      // Draw agricultural X cross-braces in the middle sections of the rails
-      const drawXBrace = (centerPos) => {
-        ctx.save();
-        ctx.translate(isVert ? 0 : centerPos, isVert ? centerPos : 0);
-        ctx.strokeStyle = '#4a250c';
-        ctx.lineWidth = 2.5;
-
-        if (isVert) {
-          ctx.beginPath();
-          ctx.moveTo(outOffset, -12); ctx.lineTo(inOffset, 12);
-          ctx.moveTo(inOffset, -12); ctx.lineTo(outOffset, 12);
-          ctx.stroke();
-        } else {
-          ctx.beginPath();
-          ctx.moveTo(-12, outOffset); ctx.lineTo(12, inOffset);
-          ctx.moveTo(-12, inOffset); ctx.lineTo(12, outOffset);
-          ctx.stroke();
-        }
-        ctx.restore();
-      };
-
-      if (rw > 250 || rh > 250) {
-        const len = isVert ? rh : rw;
-        drawXBrace(-len * 0.25);
-        drawXBrace(0);
-        drawXBrace(len * 0.25);
       } else {
-        drawXBrace(0);
+        const startX = rx - halfW + 8;
+        const endX = rx + halfW - 8;
+        for (let px = startX; px <= endX; px += picketSpacing) {
+          drawPicket(ctx, px, ry, picketWidth, picketHeight);
+        }
       }
-
-      // Paint the horizontal/vertical outer and inner rails
-      drawSingleRail(outerX, outerY, outerW, outerH, 6, barkGradOuter);
-      drawSingleRail(innerX, innerY, innerW, innerH, 10, barkGradInner);
-
-      ctx.restore();
     };
 
-    // Draw the 6 individual double-rail corral walls
+    // Draw the 6 individual picket fence walls
     // Top Horizontal Fence Wall
     drawFenceWall(this.ctx, 250, 14, 395, 16, false);
     // Bottom Horizontal Fence Wall
@@ -1564,33 +1525,48 @@ class GameEngine {
     drawFenceWall(this.ctx, 486, 260, 16, 400, true);
     drawFenceWall(this.ctx, 486, 740, 16, 400, true);
 
-    // 5. Draw circular cut log posts at corners & pocket midpoints
+    // 5. Draw square white posts at corners & pocket midpoints
     const drawFencePost = (ctx, px, py, pr) => {
+      const dx = px - 250;
+      const dy = py - 500;
+      const dist = Math.hypot(dx, dy) || 1;
+      const ux = dx / dist;
+      const uy = dy / dist;
+
       ctx.save();
       // Post shadow
-      ctx.beginPath(); ctx.arc(px+3, py+3, pr, 0, Math.PI*2); ctx.fillStyle = 'rgba(10,20,10,0.5)'; ctx.fill();
-      
-      // Bark base
-      ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI*2); ctx.fillStyle = '#421f07'; ctx.fill();
-      ctx.strokeStyle = '#230f03'; ctx.lineWidth = 2; ctx.stroke();
-      
-      // Cut wood core top
-      ctx.beginPath(); ctx.arc(px, py, pr - 3, 0, Math.PI*2); ctx.fillStyle = '#b5865a'; ctx.fill();
-      ctx.strokeStyle = '#8a5c33'; ctx.lineWidth = 1.2; ctx.stroke();
-      
-      // Growth rings
-      ctx.strokeStyle = 'rgba(66, 31, 7, 0.25)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(px, py, pr * 0.65, 0, Math.PI*2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(px, py, pr * 0.35, 0, Math.PI*2); ctx.stroke();
-      
-      // Log radial crack
-      ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(px + pr * 0.5, py - pr * 0.2);
-      ctx.strokeStyle = '#230f03';
+      ctx.fillStyle = 'rgba(10, 20, 10, 0.3)';
+      ctx.fillRect(px - pr + 3, py - pr + 3, pr * 2, pr * 2);
+
+      // Post body (weathered white wood)
+      ctx.fillStyle = '#eae7dd';
+      ctx.strokeStyle = '#3d3a33';
       ctx.lineWidth = 1.5;
+      ctx.fillRect(px - pr, py - pr, pr * 2, pr * 2);
+      ctx.strokeRect(px - pr, py - pr, pr * 2, pr * 2);
+
+      // Post cap (slightly offset outwards for 3D depth!)
+      const capOffset = 4;
+      const cx = px + ux * capOffset;
+      const cy = py + uy * capOffset;
+
+      ctx.fillStyle = '#f6f4eb';
+      ctx.fillRect(cx - pr - 1, cy - pr - 1, (pr + 1) * 2, (pr + 1) * 2);
+      ctx.strokeRect(cx - pr - 1, cy - pr - 1, (pr + 1) * 2, (pr + 1) * 2);
+
+      // Small diamond detail on cap
+      ctx.fillStyle = '#d7d4c8';
+      ctx.fillRect(cx - pr * 0.4, cy - pr * 0.4, pr * 0.8, pr * 0.8);
+      ctx.strokeRect(cx - pr * 0.4, cy - pr * 0.4, pr * 0.8, pr * 0.8);
+
+      // Weathered wood crack details
+      ctx.strokeStyle = '#5c483a';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(px - pr * 0.5, py - pr * 0.5);
+      ctx.lineTo(px - pr * 0.5, py + pr * 0.2);
       ctx.stroke();
-      
+
       ctx.restore();
     };
 
@@ -1601,22 +1577,6 @@ class GameEngine {
     drawFencePost(this.ctx, this.virtualWidth - 32, this.virtualHeight - 32, 14); // Bottom-Right corner
     drawFencePost(this.ctx, 14, 500, 12);               // Mid-Left post
     drawFencePost(this.ctx, this.virtualWidth - 14, 500, 12); // Mid-Right post
-
-    // Rope binds wrapped around corners/joins
-    this.ctx.strokeStyle = '#bfac95'; // Rope fiber color
-    this.ctx.lineWidth = 2.5;
-    const ropeWrap = (rx, ry) => {
-      this.ctx.beginPath();
-      this.ctx.moveTo(rx - 8, ry - 8); this.ctx.lineTo(rx + 8, ry + 8);
-      this.ctx.moveTo(rx + 8, ry - 8); this.ctx.lineTo(rx - 8, ry + 8);
-      this.ctx.stroke();
-    };
-    ropeWrap(32, 32);
-    ropeWrap(this.virtualWidth - 32, 32);
-    ropeWrap(32, this.virtualHeight - 32);
-    ropeWrap(this.virtualWidth - 32, this.virtualHeight - 32);
-    ropeWrap(14, 500);
-    ropeWrap(this.virtualWidth - 14, 500);
 
     // 6. Draw border grass tufts that peek OVER the fence rails, creating gorgeous layered 3D depth!
     this.borderGrassTufts.forEach(tuft => {
@@ -1657,10 +1617,6 @@ class GameEngine {
       this.ctx.restore();
     });
 
-    // Inner log boundaries shadow (the cushion impact edge)
-    this.ctx.strokeStyle = '#112d1b';
-    this.ctx.lineWidth = 4;
-    this.ctx.strokeRect(28, 28, this.virtualWidth - 56, this.virtualHeight - 56);
     
     this.ctx.restore(); // BACK to unscaled normal screen pixel coordinates!
 

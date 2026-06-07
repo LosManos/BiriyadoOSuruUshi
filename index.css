@@ -577,10 +577,10 @@ body::before {
 .canvas-wrapper {
   width: 100%;
   height: 100%;
-  background: var(--table-rail);
+  background: transparent;
   border-radius: 16px;
-  padding: 8px; /* Fence / Rail cushion bounds padding */
-  box-shadow: var(--shadow-md), inset 0 2px 8px rgba(0,0,0,0.8);
+  padding: 0; /* Removed brown border padding */
+  box-shadow: none; /* Removed outer drop shadow */
   position: relative;
   box-sizing: border-box;
   overflow: hidden;
@@ -589,22 +589,13 @@ body::before {
 
 /* Inset shadow giving depth to the grass pasture */
 .canvas-wrapper::before {
-  content: "";
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
-  border-radius: 8px;
-  box-shadow: inset 0 8px 16px rgba(0,0,0,0.85);
-  pointer-events: none;
-  z-index: 5;
+  display: none; /* Hidden wrapper shadow to remove dark frame */
 }
 
 #game-canvas {
   width: 100%;
   height: 100%;
-  border-radius: 8px;
+  border-radius: 16px;
   display: block;
   cursor: crosshair;
   background-color: var(--table-felt);
